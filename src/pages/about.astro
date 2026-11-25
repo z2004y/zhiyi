@@ -1,0 +1,105 @@
+---
+import { AUTHOR } from '../consts';
+import Icon from '../components/Icon.astro';
+import SiteLayout from '../layouts/SiteLayout.astro';
+---
+
+<SiteLayout title="关于" description={`关于 ${AUTHOR.name} 与这个专注于纯粹阅读的个人博客空间。`}>
+  <div class="about-clean-wrap">
+    <!-- 个人名片与主张 -->
+    <header class="about-profile-card">
+      <div class="profile-avatar-wrap">
+        <img class="profile-avatar" src={AUTHOR.avatar} alt={AUTHOR.name} width="88" height="88" loading="eager" />
+      </div>
+      <div class="profile-info">
+        <div class="profile-name-row">
+          <h1 class="profile-name">{AUTHOR.name}</h1>
+          <span class="profile-badge">前端探索 · 界面美学 · 知行合一</span>
+        </div>
+        <p class="profile-bio">
+          “知行合一，绝知此事要躬行。在数字与文字之间，寻觅一方专注而纯粹的自留地。”
+        </p>
+        <div class="profile-actions">
+          <a class="btn btn-ghost" href={`mailto:${AUTHOR.email}`}>
+            <Icon name="mail" />
+            <span>发信交流</span>
+          </a>
+          <a class="btn btn-ghost" href={AUTHOR.github} target="_blank" rel="noopener noreferrer">
+            <Icon name="github" />
+            <span>GitHub</span>
+          </a>
+          <a class="btn btn-ghost" href="/links">
+            <Icon name="link" />
+            <span>友人帐</span>
+          </a>
+          <a class="btn btn-ghost" href="/rss.xml">
+            <Icon name="rss" />
+            <span>RSS</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- 简洁自述正文 -->
+    <article class="about-article card">
+      <section class="about-section">
+        <h2>关于我与「知一」</h2>
+        <p>
+          你好，我是 <strong>知一</strong>。名字取自明代理学家王阳明的「知行合一」，以及《老子》中「圣人抱一为天下式」的纯粹。
+        </p>
+        <p>
+          平日深耕于前端工程、交互设计与现代 Web 体系。代码对我而言从不仅是冷冰冰的指令集，而是逻辑与审美的交响。写出健壮严谨的架构，和雕琢出一套舒适克制的 UI，同样令人着迷。
+        </p>
+        <p>
+          身处信息高度碎片的时代，我偏爱那些经过时间沉淀的慢思考。相比追逐纷繁的流行热点，更愿意探求底层本质与长期复利。
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>这片自留地</h2>
+        <p>
+          搭建这个个人博客，初衷是为自己保留一个纯粹无扰的表达空间：
+        </p>
+        <ul class="about-points">
+          <li><strong>纯粹无扰</strong>：零广告、零第三方跟踪分析、无弹窗干扰，还原专注安宁的阅读场景。</li>
+          <li><strong>极速轻巧</strong>：基于 Astro 纯静态编译与原生 CSS Tokens，没有笨重框架负担，毫秒呈现。</li>
+          <li><strong>求真务实</strong>：技术笔记力求步骤可复现，生活随笔保持诚实与温度。</li>
+        </ul>
+      </section>
+
+      <section class="about-section">
+        <h2>三项信条</h2>
+        <div class="principles-grid-clean">
+          <div class="principle-clean-card">
+            <div class="principle-clean-title">
+              <Icon name="leaf" />
+              <strong>知行合一 · 躬行求实</strong>
+            </div>
+            <p>学而不思则罔，思而不学则殆。理论唯有经过实际打磨，才能沉淀为内化于心的笃定智慧。</p>
+          </div>
+          <div class="principle-clean-card">
+            <div class="principle-clean-title">
+              <Icon name="sparkles" />
+              <strong>克制留白 · 如无必要</strong>
+            </div>
+            <p>崇尚奥卡姆剃刀法则。好的设计在于懂得删减冗余与干扰，留出让注意力自由呼吸的空间。</p>
+          </div>
+          <div class="principle-clean-card">
+            <div class="principle-clean-title">
+              <Icon name="clock" />
+              <strong>长期主义 · 沉心自守</strong>
+            </div>
+            <p>不为短期的信息喧嚣所裹挟，坚持积累可持续生长的核心能力，认真对待每个像素与逻辑。</p>
+          </div>
+        </div>
+      </section>
+
+      <footer class="about-footer-contact">
+        <p>
+          “独行快，众行远。”无论是探讨代码细节、交流界面美学，或是单纯分享一本好书，我都非常欢迎你的来信：
+          <a href={`mailto:${AUTHOR.email}`}>{AUTHOR.email}</a>。
+        </p>
+      </footer>
+    </article>
+  </div>
+</SiteLayout>

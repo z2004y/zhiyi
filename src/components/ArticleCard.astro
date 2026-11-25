@@ -1,0 +1,79 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import { categoryColor } from '../consts';
+import { readingTime } from '../utils';
+import FormattedDate from './FormattedDate.astro';
+import Icon from './Icon.astro';
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+  index?: number;
+}
+
+const { post, index = 0 } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, category, tags, featured } = post.data;
+const minutes = readingTime(post);
+const href = `/blog/${post.id}/`;
+---
+
+<article
+  class:list={['article-card', { 'no-cover': !heroImage, 'is-featured': featured }]}
+  data-post-card
+  data-category={category}
+  data-date={pubDate.toISOString()}
+  data-updated={(updatedDate ?? pubDate).toISOString()}
+  data-title={title}
+  style={`--delay:${Math.min(index, 8) * 45}ms`}
+>
+  <a class="article-card__link" href={href} aria-label={`阅读：${title}`}></a>
+
+  {
+    heroImage && (
+      <div class="article-card__cover">
+        <Image
+          src={heroImage}
+          alt=""
+          width={720}
+          height={420}
+          loading={index < 2 ? 'eager' : 'lazy'}
+        />
+      </div>
+    )
+  }
+
+  <div class="article-card__body">
+    <h3 class="article-card__title">
+      <span class="title-text">{title}</span>
+      <span class="card-arrow" aria-hidden="true">→</span>
+    </h3>
+    <p class="article-card__description">{description}</p>
+    <div class="article-card__meta">
+      <span class="meta-item meta-item--pub" title={`发布于 ${pubDate.toISOString().slice(0, 10)}`}>
+        <Icon name="calendar" />
+        <FormattedDate date={pubDate} />
+      </span>
+      <span class="meta-item meta-item--updated" title={`最近更新于 ${(updatedDate ?? pubDate).toISOString().slice(0, 10)}`}>
+        <Icon name="pencil" />
+        <FormattedDate date={updatedDate ?? pubDate} />
+      </span>
+      <span class="meta-item category-pill" style={`--cat-color:${categoryColor(category)}`}>
+        <span class="category-dot" style={`--dot:${categoryColor(category)}`}></span>
+        {category}
+      </span>
+      <span class="meta-item">
+        <Icon name="clock" />
+        {minutes} 分钟
+      </span>
+    </div>
+    {
+      tags.length > 0 && (
+        <div class="tag-list">
+          {tags.slice(0, 3).map((tag) => (
+            <a class="tag" href={`/tags/${encodeURIComponent(tag)}/`}>#{tag}</a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</article>

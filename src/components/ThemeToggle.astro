@@ -1,0 +1,15 @@
+---
+import Icon from './Icon.astro';
+---
+
+<div class="theme-toggle" data-theme-toggle role="radiogroup" aria-label="主题模式选择">
+  <button type="button" aria-label="浅色模式" class="" data-theme-set="light" title="浅色模式">
+    <Icon name="sun" />
+  </button>
+  <button type="button" aria-label="跟随系统" class="active" data-theme-set="auto" title="跟随系统">
+    <Icon name="monitor" />
+  </button>
+  <button type="button" aria-label="深色模式" class="" data-theme-set="dark" title="深色模式">
+    <Icon name="moon" />
+  </button>
+</div>

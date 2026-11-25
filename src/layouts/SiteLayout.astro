@@ -1,0 +1,1231 @@
+---
+import type { ImageMetadata } from 'astro';
+import { getCollection } from 'astro:content';
+import { categoryColor, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Icon from '../components/Icon.astro';
+import Sidebar from '../components/Sidebar.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: ImageMetadata;
+  isPost?: boolean;
+}
+
+const {
+  title = SITE_TITLE,
+  description = SITE_DESCRIPTION,
+  image,
+  isPost = false,
+} = Astro.props;
+const hasAside = Astro.slots.has('aside');
+
+const allPostsForSearch = (await getCollection('blog')).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+const searchItems = allPostsForSearch.map((post) => ({
+  title: post.data.title,
+  description: post.data.description,
+  category: post.data.category,
+  categoryColor: categoryColor(post.data.category),
+  tags: post.data.tags ?? [],
+  date: post.data.pubDate.toISOString().slice(0, 10),
+  href: `/blog/${post.id}/`,
+}));
+const serializedSearch = JSON.stringify(searchItems).replace(/</g, '\\u003c');
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <BaseHead title={title} description={description} image={image} />
+  </head>
+  <body>
+    <!-- 顶部页面加载滚动条 -->
+    <div class="top-loading-bar" id="top-loading-bar" aria-hidden="true"></div>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+
+    <div class="toast-stack" data-toast-stack aria-live="polite" aria-atomic="false"></div>
+
+    <div class:list={['blog-shell', { 'has-aside': hasAside, 'is-post-page': isPost }]}>
+      <Sidebar />
+
+      <main id="main-content" tabindex="-1">
+        <slot />
+      </main>
+
+      {
+        hasAside && (
+          <div class="blog-aside-track">
+            <aside class="blog-aside-fixed" aria-label="文章辅助信息">
+              <slot name="aside" />
+            </aside>
+          </div>
+        )
+      }
+
+      <Footer />
+    </div>
+
+    <div class="sidebar-overlay" data-sidebar-overlay aria-hidden="true"></div>
+
+    <!-- Zhilu 风格聚焦搜索弹窗 -->
+    <dialog id="search-modal" class="search-modal" aria-label="搜索文章">
+      <div class="search-modal-backdrop" data-search-close></div>
+      <div class="search-modal-card">
+        <div class="search-modal-header">
+          <Icon name="search" class="search-modal-icon" />
+          <input
+            id="search-modal-input"
+            type="search"
+            placeholder="搜索文章标题、内容、分类或标签…"
+            autocomplete="off"
+            aria-label="搜索文章"
+          />
+          <button class="search-modal-close" type="button" data-search-close aria-label="关闭搜索">
+            <kbd class="keycut">ESC</kbd>
+          </button>
+        </div>
+        <div class="search-modal-summary" data-search-summary>
+          <span>输入关键词即时检索文章</span>
+          <span class="search-modal-hints">
+            <kbd>↑</kbd><kbd>↓</kbd> 选择，<kbd>Enter</kbd> 查看
+          </span>
+        </div>
+        <div class="search-modal-results" data-search-results></div>
+      </div>
+    </dialog>
+    <script type="application/json" id="global-search-data" set:html={serializedSearch} />
+
+    <!-- 栖童 / Clarity 风格底栏浮动控制面板 (Panel Anchor) -->
+    <div class="panel-anchor">
+      <div id="blog-panel" class:list={['blog-panel', { 'is-post-panel': isPost }]}>
+        {
+          hasAside && (
+            <button
+              class="panel-btn toggle-aside hide-above-tablet"
+              type="button"
+              data-aside-toggle
+              aria-label="打开文章目录"
+              title="文章目录"
+            >
+              <Icon name="toc" />
+            </button>
+          )
+        }
+        <button
+          class:list={['panel-btn', 'toggle-sidebar', { 'hide-above-mobile': !isPost }]}
+          type="button"
+          data-menu-toggle
+          aria-label="打开导航菜单"
+          title="导航菜单"
+        >
+          <Icon name="sidebar" />
+        </button>
+        <button
+          class="panel-btn to-top-btn"
+          type="button"
+          data-scroll-top
+          aria-label="回到顶部"
+          title="回到顶部"
+        >
+          <div class="top-text">
+            <span class="text" data-top-percent>0</span>
+            <span class="unit">%</span>
+          </div>
+          <Icon name="top" class="top-icon" />
+        </button>
+      </div>
+    </div>
+
+    <script>
+      const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let lastScrollY = window.scrollY;
+
+      /* ---------- 顶部页面加载滚动条 (Top Loading Bar) ---------- */
+      class TopLoadingBar {
+        private el: HTMLElement | null = null;
+        private timer: number | null = null;
+        private progress: number = 0;
+        private isRunning: boolean = false;
+
+        constructor() {
+          this.el = document.getElementById('top-loading-bar');
+        }
+
+        set(p: number) {
+          this.progress = Math.min(100, Math.max(0, p));
+          if (this.el) {
+            this.el.style.opacity = '1';
+            this.el.style.transform = `scaleX(${this.progress / 100})`;
+          }
+        }
+
+        start() {
+          if (!this.el) return;
+          this.isRunning = true;
+          this.set(18);
+
+          if (this.timer) clearInterval(this.timer);
+          this.timer = window.setInterval(() => {
+            if (this.progress < 85) {
+              const step = (85 - this.progress) * 0.15;
+              this.set(this.progress + Math.max(step, 1.2));
+            }
+          }, 160);
+        }
+
+        done() {
+          if (!this.el) return;
+          if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+          }
+          this.set(100);
+          this.isRunning = false;
+
+          window.setTimeout(() => {
+            if (this.el && !this.isRunning) {
+              this.el.style.opacity = '0';
+              window.setTimeout(() => {
+                if (!this.isRunning && this.el) {
+                  this.set(0);
+                }
+              }, 250);
+            }
+          }, 200);
+        }
+      }
+
+      const pageLoader = new TopLoadingBar();
+      (window as any).__topLoader = pageLoader;
+
+      // 首次加载推进与完成
+      pageLoader.start();
+      if (document.readyState === 'complete') {
+        pageLoader.done();
+      } else {
+        window.addEventListener('load', () => pageLoader.done(), { once: true });
+      }
+
+      // 监听站内链接跳转点击，启动加载条
+      document.addEventListener('click', (e) => {
+        const anchor = (e.target as Element | null)?.closest<HTMLAnchorElement>('a');
+        if (!anchor) return;
+        const href = anchor.getAttribute('href');
+        if (
+          href &&
+          !href.startsWith('#') &&
+          !href.startsWith('mailto:') &&
+          !href.startsWith('tel:') &&
+          !href.startsWith('javascript:') &&
+          !anchor.target &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.shiftKey &&
+          (href.startsWith('/') || href.startsWith(window.location.origin))
+        ) {
+          try {
+            const url = new URL(anchor.href, window.location.href);
+            if (url.pathname !== window.location.pathname || url.search !== window.location.search) {
+              pageLoader.start();
+            }
+          } catch {}
+        }
+      });
+
+      /* ---------- 全局主题管理 ---------- */
+      type Theme = 'auto' | 'light' | 'dark';
+      const themeLabels: Record<Theme, string> = {
+        auto: '跟随系统',
+        light: '浅色模式',
+        dark: '深色模式',
+      };
+      const rootEl = document.documentElement;
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+      function isDarkMode(theme: Theme) {
+        return theme === 'dark' || (theme === 'auto' && mediaQuery.matches);
+      }
+
+      function updateThemeMeta(theme: Theme) {
+        const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+        if (!meta) return;
+        meta.content = isDarkMode(theme) ? '#13171f' : '#f7f9fc';
+      }
+
+      function syncThemeUI(theme?: Theme) {
+        const curTheme = theme ?? ((rootEl.dataset.theme as Theme) || 'auto');
+
+        document.querySelectorAll<HTMLElement>('[data-theme-set]').forEach((btn) => {
+          const isCurrent = btn.dataset.themeSet === curTheme;
+          btn.classList.toggle('active', isCurrent);
+          btn.setAttribute('aria-checked', String(isCurrent));
+        });
+      }
+
+      function applyTheme(theme: Theme, persist = true) {
+        rootEl.dataset.theme = theme;
+        rootEl.style.colorScheme = isDarkMode(theme) ? 'dark' : 'light';
+        updateThemeMeta(theme);
+        syncThemeUI(theme);
+
+        if (persist) {
+          try {
+            localStorage.setItem('site-theme', theme);
+          } catch {}
+        }
+      }
+
+      function switchThemeTo(targetTheme: Theme) {
+        const curTheme = (rootEl.dataset.theme as Theme) || 'auto';
+        if (curTheme === targetTheme) return;
+
+        const notify = () => {
+          applyTheme(targetTheme);
+          document.dispatchEvent(new CustomEvent('site-toast', {
+            detail: { message: `主题已切换为${themeLabels[targetTheme]}` },
+          }));
+        };
+
+        if (!('startViewTransition' in document) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          notify();
+          return;
+        }
+
+        rootEl.style.setProperty('view-transition-name', 'theme-reveal');
+        rootEl.dataset.themeChanging = '';
+        const transition = document.startViewTransition(() => {
+          applyTheme(targetTheme);
+        });
+        document.dispatchEvent(new CustomEvent('site-toast', {
+          detail: { message: `主题已切换为${themeLabels[targetTheme]}` },
+        }));
+        transition.finished.finally(() => {
+          rootEl.style.removeProperty('view-transition-name');
+          delete rootEl.dataset.themeChanging;
+        });
+      }
+
+      function getSavedTheme(): Theme {
+        try {
+          const val = localStorage.getItem('site-theme');
+          if (val === 'light' || val === 'dark' || val === 'auto') return val;
+        } catch {}
+        return (rootEl.dataset.theme as Theme) || 'auto';
+      }
+
+      function syncFontState() {
+        const isSerif = rootEl.dataset.readingFont === 'serif';
+        document.querySelectorAll<HTMLElement>('[data-font-toggle]').forEach((btn) => {
+          btn.classList.toggle('is-serif', isSerif);
+          btn.setAttribute('aria-pressed', String(isSerif));
+          btn.title = isSerif ? '当前：书页排版（点击切换为现代排版）' : '当前：现代排版（点击切换为书页排版）';
+          const label = btn.querySelector('[data-font-label]');
+          if (label) {
+            label.textContent = isSerif ? '书页' : '现代';
+          }
+        });
+      }
+
+      function initPage() {
+        applyTheme(getSavedTheme(), false);
+        syncFontState();
+        initPostLists();
+        initToc();
+        enhanceReading();
+        initGlobalSearch();
+      }
+
+      /* ---------- 文章筛选、排序与分页 (参考 blog.zhilu.site) ---------- */
+      function initPostLists() {
+        document.querySelectorAll<HTMLElement>('[data-post-list]').forEach((list) => {
+          if (list.dataset.listInit === '1') return;
+          list.dataset.listInit = '1';
+
+          const cards = [...list.querySelectorAll<HTMLElement>('[data-post-card]')];
+          const grid = list.querySelector<HTMLElement>('[data-post-grid]');
+          const empty = list.querySelector<HTMLElement>('[data-empty-state]');
+          const filterButtons = [...list.querySelectorAll<HTMLButtonElement>('[data-filter]')];
+          const sortButtons = [...list.querySelectorAll<HTMLButtonElement>('[data-sort]')];
+          const directionButton = list.querySelector<HTMLButtonElement>('[data-sort-direction]');
+          const pagination = list.querySelector<HTMLElement>('[data-pagination]');
+          const pageNumbersWrap = list.querySelector<HTMLElement>('[data-page-numbers]');
+          const prevBtn = list.querySelector<HTMLButtonElement>('[data-page-prev]');
+          const nextBtn = list.querySelector<HTMLButtonElement>('[data-page-next]');
+
+          const pageSize = Number(list.dataset.pageSize || '6');
+          const params = new URLSearchParams(window.location.search);
+
+          let filter = params.get('category') ?? 'all';
+          if (!filterButtons.some((button) => button.dataset.filter === filter)) filter = 'all';
+          let sort = params.get('sort') === 'updated' ? 'updated' : 'date';
+          let direction = params.get('asc') === '1' ? 1 : -1;
+          let currentPage = 1;
+
+          function renderPagination(totalMatching: number) {
+            if (!pagination || !pageNumbersWrap) return;
+            const totalPages = Math.ceil(totalMatching / pageSize);
+
+            if (totalPages <= 1) {
+              pagination.hidden = true;
+              return;
+            }
+
+            pagination.hidden = false;
+            pagination.setAttribute('aria-label', `第 ${currentPage} 页，共 ${totalPages} 页`);
+
+            if (prevBtn) prevBtn.disabled = currentPage <= 1;
+            if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+
+            pageNumbersWrap.innerHTML = '';
+            for (let i = 1; i <= totalPages; i++) {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = `pagination-num ${i === currentPage ? 'active' : ''}`;
+              btn.setAttribute('aria-label', `第 ${i} 页`);
+              btn.textContent = String(i);
+              btn.addEventListener('click', () => {
+                currentPage = i;
+                apply(false, true);
+              });
+              pageNumbersWrap.appendChild(btn);
+            }
+          }
+
+          function apply(updateUrl = true, scrollToTop = false) {
+            const key = sort === 'updated' ? 'updated' : 'date';
+            list.dataset.sortMode = sort;
+
+            // 1. 排序
+            const sortedCards = [...cards].sort((a, b) => {
+              const delta =
+                new Date(a.dataset[key] || '').valueOf() - new Date(b.dataset[key] || '').valueOf();
+              return direction === 1 ? delta : -delta;
+            });
+            sortedCards.forEach((card) => grid?.appendChild(card));
+
+            // 2. 筛选
+            const matchedCards = sortedCards.filter((card) => {
+              return filter === 'all' || card.dataset.category === filter;
+            });
+
+            // 3. 计算分页
+            const totalMatching = matchedCards.length;
+            const totalPages = Math.max(1, Math.ceil(totalMatching / pageSize));
+            if (currentPage > totalPages) currentPage = 1;
+
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+
+            sortedCards.forEach((card) => {
+              const isMatched = matchedCards.includes(card);
+              if (!isMatched) {
+                card.hidden = true;
+              } else {
+                const matchIndex = matchedCards.indexOf(card);
+                card.hidden = !(matchIndex >= startIndex && matchIndex < endIndex);
+              }
+            });
+
+            renderPagination(totalMatching);
+
+            filterButtons.forEach((button) => {
+              button.setAttribute('aria-pressed', String(button.dataset.filter === filter));
+            });
+            sortButtons.forEach((button) => {
+              button.setAttribute('aria-pressed', String(button.dataset.sort === sort));
+            });
+            if (directionButton) {
+              const ascending = direction === 1;
+              directionButton.classList.toggle('is-ascending', ascending);
+              directionButton.setAttribute('aria-pressed', String(ascending));
+              directionButton.setAttribute(
+                'aria-label',
+                ascending ? '当前升序，点击切换为降序' : '当前降序，点击切换为升序',
+              );
+              directionButton.title = ascending ? '当前升序' : '当前降序';
+            }
+
+            list.dataset.view = 'list';
+            if (empty) empty.hidden = totalMatching > 0;
+
+            if (scrollToTop) {
+              list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            if (updateUrl) {
+              const next = new URL(window.location.href);
+              filter === 'all'
+                ? next.searchParams.delete('category')
+                : next.searchParams.set('category', filter);
+              sort === 'date'
+                ? next.searchParams.delete('sort')
+                : next.searchParams.set('sort', sort);
+              next.searchParams.delete('view');
+              direction === -1
+                ? next.searchParams.delete('asc')
+                : next.searchParams.set('asc', '1');
+              window.history.replaceState({}, '', next);
+            }
+          }
+
+          prevBtn?.addEventListener('click', () => {
+            if (currentPage > 1) {
+              currentPage -= 1;
+              apply(false, true);
+            }
+          });
+
+          nextBtn?.addEventListener('click', () => {
+            const matchedCount = cards.filter((c) => filter === 'all' || c.dataset.category === filter).length;
+            const totalPages = Math.ceil(matchedCount / pageSize);
+            if (currentPage < totalPages) {
+              currentPage += 1;
+              apply(false, true);
+            }
+          });
+
+          filterButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+              filter = button.dataset.filter ?? 'all';
+              currentPage = 1;
+              apply();
+            });
+          });
+          sortButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+              sort = button.dataset.sort === 'updated' ? 'updated' : 'date';
+              apply();
+            });
+          });
+          directionButton?.addEventListener('click', () => {
+            direction = direction === 1 ? -1 : 1;
+            apply();
+          });
+
+          apply(false);
+        });
+      }
+
+      /* ---------- 目录高亮与平滑跟随 (精准几何对齐与文章底部锁定算法) ---------- */
+      function initToc() {
+        const headings = [...document.querySelectorAll<HTMLElement>(
+          '.prose h2[id]:not(.sr-only):not(#footnote-label), .prose h3[id]:not(.sr-only), .prose h4[id]:not(.sr-only)'
+        )];
+        const tocEl = document.querySelector<HTMLElement>('.toc');
+        const tocBody = document.querySelector<HTMLElement>('[data-toc-body]');
+        const asideTrack = document.querySelector<HTMLElement>('.blog-aside-track');
+        const prose = document.querySelector<HTMLElement>('.prose');
+        if (!headings.length || !tocEl) return;
+
+        // 注入平滑指示器药丸（紧贴左侧轨道线）
+        let indicator = tocEl.querySelector<HTMLElement>('.toc-indicator');
+        if (!indicator) {
+          indicator = document.createElement('span');
+          indicator.className = 'toc-indicator';
+          tocEl.appendChild(indicator);
+        }
+
+        let lastActiveId: string | null = null;
+        let ticking = false;
+
+        function updateTocState() {
+          const scrollY = window.scrollY;
+          const proseRect = prose?.getBoundingClientRect();
+
+          // 判定文章正文是否已读到底部（正文底部进入屏幕或滚出）
+          const isArticleBottom = proseRect ? proseRect.bottom <= window.innerHeight : false;
+          const isPageBottom = window.innerHeight + scrollY >= document.documentElement.scrollHeight - 50;
+          const isBottom = isArticleBottom || isPageBottom;
+
+          let currentId: string | null = null;
+          if (isBottom) {
+            currentId = headings[headings.length - 1].id;
+          } else {
+            // 从下往上判定标题进入视口顶部 120px 以内的最近项
+            for (let i = headings.length - 1; i >= 0; i--) {
+              const h = headings[i];
+              const rect = h.getBoundingClientRect();
+              if (rect.top <= 120) {
+                currentId = h.id;
+                break;
+              }
+            }
+          }
+
+          if (!currentId && headings.length > 0 && scrollY < 200) {
+            currentId = headings[0].id;
+          }
+
+          if (currentId !== lastActiveId) {
+            lastActiveId = currentId;
+
+            tocEl.querySelectorAll('li.active').forEach((el) => el.classList.remove('active'));
+            tocEl.querySelectorAll('li.has-active').forEach((el) => el.classList.remove('has-active'));
+            tocEl.querySelectorAll('a[aria-current]').forEach((el) => el.removeAttribute('aria-current'));
+
+            if (currentId) {
+              const activeLi = tocEl.querySelector<HTMLLIElement>(`li[data-toc-item="${currentId}"]`);
+              if (activeLi) {
+                activeLi.classList.add('active');
+                const link = activeLi.querySelector<HTMLAnchorElement>(`a[data-toc-link="${currentId}"]`);
+                if (link) {
+                  link.setAttribute('aria-current', 'true');
+
+                  // 严密对齐：计算当前链接在 .toc 轨道线上的精确垂直坐标
+                  if (indicator) {
+                    const tocRect = tocEl.getBoundingClientRect();
+                    const linkRect = link.getBoundingClientRect();
+                    const top = linkRect.top - tocRect.top;
+                    indicator.style.transform = `translateY(${top}px)`;
+                    indicator.style.height = `${linkRect.height}px`;
+                    indicator.style.opacity = '1';
+                  }
+
+                  // 目录视口平滑滚动：仅当目标项超出当前目录可视区域且未到底部时微调，底部完全保持静止
+                  if (tocBody && !isBottom) {
+                    const bodyRect = tocBody.getBoundingClientRect();
+                    const linkRect = link.getBoundingClientRect();
+                    const isVisible = linkRect.top >= bodyRect.top + 8 && linkRect.bottom <= bodyRect.bottom - 8;
+                    if (!isVisible) {
+                      const targetScrollTop = tocBody.scrollTop + (linkRect.top - bodyRect.top) - (bodyRect.height / 2 - linkRect.height / 2);
+                      tocBody.scrollTo({
+                        top: Math.max(0, targetScrollTop),
+                        behavior: 'smooth',
+                      });
+                    }
+                  }
+                }
+
+                // 递归往上寻找父级 li，添加 has-active
+                let parent = activeLi.parentElement?.closest('li');
+                while (parent && tocEl.contains(parent)) {
+                  parent.classList.add('has-active');
+                  parent = parent.parentElement?.closest('li');
+                }
+              }
+            } else if (indicator) {
+              indicator.style.opacity = '0';
+            }
+          }
+
+          ticking = false;
+        }
+
+
+
+        function onScroll() {
+          if (!ticking) {
+            requestAnimationFrame(updateTocState);
+            ticking = true;
+          }
+        }
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll, { passive: true });
+        updateTocState();
+      }
+
+      /* ---------- Retypeset 风格的阅读增强 ---------- */
+      function enhanceReading() {
+        document.querySelectorAll<HTMLElement>('.prose pre').forEach((pre) => {
+          if (pre.parentElement?.classList.contains('code-block-wrapper')) return;
+
+          const wrapper = document.createElement('div');
+          wrapper.className = 'code-block-wrapper';
+          pre.parentNode?.insertBefore(wrapper, pre);
+
+          const header = document.createElement('div');
+          header.className = 'code-block-header';
+
+          const language =
+            pre.dataset.language ??
+            pre.querySelector('code')?.className.match(/language-([\w-]+)/)?.[1];
+          if (language) {
+            const badge = document.createElement('span');
+            badge.className = 'code-language';
+            badge.textContent = language;
+            header.appendChild(badge);
+          }
+
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'code-copy-button';
+          button.dataset.codeCopy = '';
+          button.setAttribute('aria-label', '复制代码');
+          button.innerHTML = `
+            <svg class="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+            <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
+            <span class="copy-text">复制</span>
+          `;
+          header.appendChild(button);
+
+          wrapper.appendChild(header);
+          wrapper.appendChild(pre);
+        });
+
+        /* Markdown Callouts 解析增强 */
+        document.querySelectorAll<HTMLElement>('.prose blockquote').forEach((quote) => {
+          if (quote.dataset.alertProcessed === '1') return;
+          quote.dataset.alertProcessed = '1';
+
+          const firstP = quote.querySelector('p');
+          if (!firstP) return;
+
+          const match = firstP.innerHTML.match(/^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s*<br\s*\/?>)?/i);
+          if (match) {
+            const type = match[1].toLowerCase();
+            quote.classList.add('prose-callout', `callout-${type}`);
+            firstP.innerHTML = firstP.innerHTML.replace(/^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s*<br\s*\/?>)?/i, '').trim();
+
+            const titleMap: Record<string, string> = {
+              note: '说明',
+              tip: '提示',
+              important: '重要',
+              warning: '警告',
+              caution: '注意',
+            };
+
+            const calloutTitle = document.createElement('div');
+            calloutTitle.className = 'callout-title';
+            calloutTitle.innerHTML = `<span class="callout-icon"></span><strong>${titleMap[type] || match[1]}</strong>`;
+            quote.insertBefore(calloutTitle, firstP);
+          }
+        });
+
+        document.querySelectorAll<HTMLElement>('.prose h2[id]:not(.sr-only):not(#footnote-label), .prose h3[id]:not(.sr-only)').forEach((heading) => {
+          if (heading.querySelector('.heading-anchor')) return;
+          const anchor = document.createElement('a');
+          anchor.className = 'heading-anchor';
+          anchor.href = `#${heading.id}`;
+          anchor.setAttribute('aria-label', `链接到「${heading.textContent}」`);
+          anchor.textContent = '#';
+          heading.appendChild(anchor);
+        });
+
+        ensureZoomOverlay();
+        updateFloatingState();
+      }
+
+      function ensureZoomOverlay() {
+        let overlay = document.getElementById('image-zoom-overlay');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'image-zoom-overlay';
+          overlay.className = 'zoom-overlay';
+          overlay.setAttribute('role', 'dialog');
+          overlay.setAttribute('aria-modal', 'true');
+          overlay.setAttribute('aria-label', '图片查看器');
+          overlay.tabIndex = -1;
+          document.body.appendChild(overlay);
+        }
+        return overlay;
+      }
+
+      function closeZoom() {
+        document.querySelectorAll('.zoom-img').forEach((img) => img.remove());
+        document.querySelectorAll('.zoom-caption-tooltip').forEach((el) => el.remove());
+        const overlay = document.getElementById('image-zoom-overlay');
+        if (overlay) {
+          overlay.classList.remove('is-visible');
+          overlay.style.display = 'none';
+        }
+        document.body.style.overflow = '';
+      }
+
+      function zoomImage(img: HTMLImageElement) {
+        if (!img.complete || (img.naturalWidth && img.naturalWidth < 40)) return;
+        const overlay = ensureZoomOverlay();
+        const rect = img.getBoundingClientRect();
+        const clone = img.cloneNode() as HTMLImageElement;
+        clone.className = 'zoom-img';
+        clone.removeAttribute('loading');
+        clone.removeAttribute('id');
+
+        // 获取原图真实物理尺寸与宽高比
+        const naturalWidth = img.naturalWidth || rect.width;
+        const naturalHeight = img.naturalHeight || rect.height;
+        const naturalAspect = naturalWidth / naturalHeight;
+
+        const startWidth = rect.width;
+        const startHeight = rect.width / naturalAspect;
+
+        Object.assign(clone.style, {
+          top: `${rect.top}px`,
+          left: `${rect.left}px`,
+          width: `${startWidth}px`,
+          height: `${startHeight}px`,
+          objectFit: 'contain',
+          transformOrigin: 'center center',
+        });
+
+        document.body.style.overflow = 'hidden';
+        document.body.appendChild(clone);
+        overlay.style.display = 'block';
+        overlay.setAttribute('tabindex', '-1');
+        (overlay as HTMLElement).focus();
+
+        // 舒适预览尺寸计算：避免图片过大占满整个屏幕，留出优雅的呼吸边距 (参考 Zhilu / Medium 灯箱规范)
+        const isMobile = window.innerWidth <= 640;
+        // 桌面端最大宽度约束在 860px 且不超过视口 76%，最大高度约束在 620px 且不超过视口 74%
+        const maxVw = isMobile ? window.innerWidth * 0.9 : Math.min(window.innerWidth * 0.76, 860);
+        const maxVh = isMobile ? window.innerHeight * 0.8 : Math.min(window.innerHeight * 0.74, 620);
+
+        let targetWidth = Math.min(naturalWidth, maxVw);
+        let targetHeight = targetWidth / naturalAspect;
+
+        if (targetHeight > maxVh) {
+          targetHeight = maxVh;
+          targetWidth = targetHeight * naturalAspect;
+        }
+
+        // 避免小图过度无节制拉伸
+        if (naturalWidth < 420) {
+          targetWidth = Math.min(naturalWidth * 1.4, targetWidth);
+          targetHeight = targetWidth / naturalAspect;
+        }
+
+        const scale = targetWidth / startWidth;
+        const deltaX = window.innerWidth / 2 - (rect.left + startWidth / 2);
+        const deltaY = window.innerHeight / 2 - (rect.top + startHeight / 2);
+
+        requestAnimationFrame(() => {
+          overlay.classList.add('is-visible');
+          clone.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scale})`;
+
+          // 若图片带有描述/图注，展示底部胶囊提示条 (参考 blog.zhilu.site / Lightbox)
+          const caption = img.alt || img.getAttribute('title');
+          if (caption && caption.trim()) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'zoom-caption-tooltip';
+            tooltip.innerHTML = `<span class="caption-text">${caption}</span><button class="caption-close" type="button" aria-label="关闭预览">✕</button>`;
+            tooltip.querySelector('.caption-close')?.addEventListener('click', (e) => {
+              e.stopPropagation();
+              closeZoom();
+            });
+            document.body.appendChild(tooltip);
+          }
+        });
+      }
+
+      /* ---------- Zhilu 风格全站聚焦搜索弹窗 ---------- */
+      function initGlobalSearch() {
+        const modal = document.getElementById('search-modal') as HTMLDialogElement | null;
+        if (!modal || modal.dataset.searchInit === '1') return;
+        modal.dataset.searchInit = '1';
+
+        const input = modal.querySelector<HTMLInputElement>('#search-modal-input');
+        const resultsEl = modal.querySelector<HTMLElement>('[data-search-results]');
+        const summaryEl = modal.querySelector<HTMLElement>('[data-search-summary]');
+        const closeBtns = modal.querySelectorAll<HTMLElement>('[data-search-close]');
+
+        const rawData = document.getElementById('global-search-data')?.textContent || '[]';
+        let posts: Array<{ title: string; description: string; category: string; categoryColor: string; tags: string[]; date: string; href: string }> = [];
+        try {
+          posts = JSON.parse(rawData);
+        } catch {}
+
+        let selectedIdx = -1;
+
+        function openSearch() {
+          if (!modal) return;
+          modal.showModal();
+          document.body.style.overflow = 'hidden';
+          if (input) {
+            input.value = '';
+            input.focus();
+          }
+          renderSearch('');
+        }
+
+        function closeSearch() {
+          if (!modal) return;
+          modal.close();
+          document.body.style.overflow = '';
+          selectedIdx = -1;
+        }
+
+        function renderSearch(query: string) {
+          if (!resultsEl || !summaryEl) return;
+          const q = query.trim().toLowerCase();
+          selectedIdx = -1;
+
+          if (!q) {
+            summaryEl.innerHTML = `<span>输入关键词即时检索全部 ${posts.length} 篇文章</span><span class="search-modal-hints"><kbd>↑</kbd><kbd>↓</kbd> 选择，<kbd>Enter</kbd> 查看</span>`;
+            resultsEl.innerHTML = '';
+            return;
+          }
+
+          const matched = posts.filter((p) => {
+            const hay = [p.title, p.description, p.category, ...(p.tags || [])].join(' ').toLowerCase();
+            return hay.includes(q);
+          });
+
+          summaryEl.innerHTML = `<span>找到 <strong>${matched.length}</strong> 篇相关文章</span><span class="search-modal-hints"><kbd>ESC</kbd> 退出</span>`;
+
+          if (matched.length === 0) {
+            resultsEl.innerHTML = `<div class="search-empty-state"><p>未找到与「<strong>${query}</strong>」相关的文章</p><span>尝试更换关键词、分类或标签</span></div>`;
+            return;
+          }
+
+          resultsEl.innerHTML = matched.map((p, idx) => `
+            <a class="search-result-item ${idx === 0 ? 'is-selected' : ''}" href="${p.href}" data-result-idx="${idx}">
+              <div class="result-title">${p.title}</div>
+              <div class="result-desc">${p.description}</div>
+              <div class="result-meta">
+                <span class="category-dot" style="--dot:${p.categoryColor}"></span>
+                <span class="category-name">${p.category}</span>
+                <span class="meta-sep">·</span>
+                <span class="result-date">${p.date}</span>
+              </div>
+            </a>
+          `).join('');
+
+          if (matched.length > 0) selectedIdx = 0;
+        }
+
+        input?.addEventListener('input', () => renderSearch(input.value));
+
+        closeBtns.forEach((btn) => btn.addEventListener('click', closeSearch));
+
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) closeSearch();
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            if (modal.open) closeSearch();
+            else openSearch();
+            return;
+          }
+
+          if (!modal.open) return;
+
+          if (e.key === 'Escape') {
+            closeSearch();
+            return;
+          }
+
+          const items = [...resultsEl?.querySelectorAll<HTMLAnchorElement>('.search-result-item') || []];
+          if (!items.length) return;
+
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIdx = (selectedIdx + 1) % items.length;
+            items.forEach((it, i) => it.classList.toggle('is-selected', i === selectedIdx));
+            items[selectedIdx].scrollIntoView({ block: 'nearest' });
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIdx = (selectedIdx - 1 + items.length) % items.length;
+            items.forEach((it, i) => it.classList.toggle('is-selected', i === selectedIdx));
+            items[selectedIdx].scrollIntoView({ block: 'nearest' });
+          } else if (e.key === 'Enter' && selectedIdx >= 0) {
+            e.preventDefault();
+            items[selectedIdx].click();
+          }
+        });
+
+        document.querySelectorAll('[data-search-open]').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openSearch();
+          });
+        });
+      }
+
+      function updateFloatingState() {
+        const scrollY = window.scrollY;
+        const delta = scrollY - lastScrollY;
+        const panel = document.getElementById('blog-panel');
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const ratio = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+        const percentVal = Math.round(ratio * 100);
+
+        // 栖童 / Clarity 风格底栏浮动控制面板 (Panel Anchor) 显隐与滚动百分比
+        if (panel) {
+          panel.classList.toggle('show', scrollY > 120);
+          panel.classList.toggle('ended', percentVal >= 96);
+        }
+
+        const percent = document.querySelector<HTMLElement>('[data-top-percent]');
+        if (percent) percent.textContent = String(percentVal);
+
+        const topBar = document.querySelector<HTMLElement>('.post-top-bar');
+        if (topBar) {
+          if (scrollY <= 120) {
+            topBar.classList.remove('is-visible');
+          } else if (delta < -4) {
+            topBar.classList.add('is-visible');
+          } else if (delta > 4) {
+            topBar.classList.remove('is-visible');
+          }
+        }
+
+        lastScrollY = scrollY;
+
+        const blur = document.querySelector<HTMLElement>('.post-header__blur');
+        if (blur) {
+          const fade = Math.max(0.12, 0.6 - scrollY / (window.innerHeight * 2));
+          blur.style.opacity = String(fade);
+        }
+      }
+
+      /* ---------- 全局一次性事件 ---------- */
+      if (!window.__blogEventsBound) {
+        window.__blogEventsBound = true;
+
+        document.addEventListener('astro:page-load', initPage);
+        if (document.readyState !== 'loading') initPage();
+        else document.addEventListener('DOMContentLoaded', initPage, { once: true });
+
+        window.addEventListener('scroll', updateFloatingState, { passive: true });
+        window.addEventListener('resize', () => {
+          if (document.querySelector('.zoom-img')) closeZoom();
+          updateFloatingState();
+        });
+
+        mediaQuery.addEventListener('change', () => {
+          const cur = (rootEl.dataset.theme as Theme) || 'auto';
+          if (cur === 'auto') applyTheme('auto', false);
+        });
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            closeZoom();
+            const sidebar = document.getElementById('blog-sidebar');
+            const asideTrack = document.querySelector<HTMLElement>('.blog-aside-track');
+            sidebar?.classList.remove('is-open');
+            asideTrack?.classList.remove('is-open');
+            document.querySelector('[data-sidebar-overlay]')?.classList.remove('is-visible');
+            document.querySelectorAll('[data-menu-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+            document.querySelectorAll('[data-aside-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+            if (document.body.style.overflow === 'hidden' && !document.querySelector('.zoom-img')) {
+              document.body.style.overflow = '';
+            }
+          }
+        });
+
+        document.addEventListener('site-toast', (event) => {
+          const { message, duration = 2200 } = (event as CustomEvent<{ message: string; duration?: number }>).detail;
+          const stack = document.querySelector<HTMLElement>('[data-toast-stack]');
+          if (!stack || !message) return;
+
+          const toast = document.createElement('div');
+          toast.className = 'site-toast';
+          toast.setAttribute('role', 'status');
+          toast.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg><span></span>`;
+          toast.querySelector('span')!.textContent = message;
+          stack.appendChild(toast);
+          requestAnimationFrame(() => toast.classList.add('is-visible'));
+          window.setTimeout(() => {
+            toast.classList.remove('is-visible');
+            window.setTimeout(() => toast.remove(), 220);
+          }, duration);
+        });
+
+        document.addEventListener('click', async (event) => {
+          const target = event.target as Element | null;
+          if (!target) return;
+
+          const themeSetBtn = target.closest<HTMLButtonElement>('[data-theme-set]');
+          if (themeSetBtn) {
+            event.preventDefault();
+            const chosen = (themeSetBtn.dataset.themeSet as Theme) || 'auto';
+            switchThemeTo(chosen);
+            return;
+          }
+
+          const wechatLink = target.closest<HTMLAnchorElement>('a[href="#wechat"]');
+          if (wechatLink) {
+            event.preventDefault();
+            try {
+              await navigator.clipboard.writeText('zhiyi');
+              document.dispatchEvent(new CustomEvent('site-toast', { detail: { message: '微信号已复制到剪贴板' } }));
+            } catch {
+              document.dispatchEvent(new CustomEvent('site-toast', { detail: { message: '微信：zhiyi' } }));
+            }
+            return;
+          }
+
+          const copyButton = target.closest<HTMLButtonElement>('[data-code-copy]');
+          if (copyButton) {
+            const wrapper = copyButton.closest<HTMLElement>('.code-block-wrapper');
+            const pre = wrapper?.querySelector('pre');
+            const codeLines = Array.from(pre?.querySelectorAll<HTMLElement>('.line') || []);
+            const code = codeLines.length > 0
+              ? codeLines.map((l) => l.textContent ?? '').join('\n')
+              : (pre?.innerText || pre?.textContent || '');
+            if (!code) return;
+            try {
+              await navigator.clipboard.writeText(code);
+              copyButton.classList.add('copied');
+              document.dispatchEvent(new CustomEvent('site-toast', { detail: { message: '代码已复制到剪贴板' } }));
+              window.setTimeout(() => copyButton.classList.remove('copied'), 2000);
+            } catch {
+              window.prompt('复制代码：', code);
+            }
+            return;
+          }
+
+          const proseImage = target.closest<HTMLImageElement>('.prose img');
+          if (proseImage) {
+            event.preventDefault();
+            zoomImage(proseImage);
+            return;
+          }
+
+          if (target.closest('#image-zoom-overlay') || target.classList.contains('zoom-img')) {
+            closeZoom();
+            return;
+          }
+
+          if (target.closest('[data-scroll-top]')) {
+            window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' });
+            return;
+          }
+
+          /* 排版风格切换（现代无衬线 / 书页衬线） */
+          const fontToggle = target.closest<HTMLButtonElement>('[data-font-toggle]');
+          if (fontToggle) {
+            const current = rootEl.dataset.readingFont === 'serif' ? 'serif' : 'sans';
+            const next = current === 'serif' ? 'sans' : 'serif';
+            rootEl.dataset.readingFont = next;
+            try {
+              localStorage.setItem('reading-font', next);
+            } catch {}
+            syncFontState();
+            document.dispatchEvent(new CustomEvent('site-toast', {
+              detail: { message: next === 'serif' ? '已切换为书页排版（衬线）' : '已切换为现代排版（黑体）' },
+            }));
+            return;
+          }
+
+          /* 移动端与平板端目录与菜单抽屉全局委托 */
+          const asideToggle = target.closest<HTMLButtonElement>('[data-aside-toggle]');
+          if (asideToggle) {
+            const asideTrack = document.querySelector<HTMLElement>('.blog-aside-track');
+            const overlay = document.querySelector<HTMLElement>('[data-sidebar-overlay]');
+            const sidebar = document.getElementById('blog-sidebar');
+            const isOpen = asideTrack?.classList.contains('is-open');
+
+            if (!isOpen) {
+              sidebar?.classList.remove('is-open');
+              document.querySelectorAll('[data-menu-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+              asideTrack?.classList.add('is-open');
+              overlay?.classList.add('is-visible');
+              document.querySelectorAll('[data-aside-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'true'));
+              document.body.style.overflow = 'hidden';
+            } else {
+              asideTrack?.classList.remove('is-open');
+              overlay?.classList.remove('is-visible');
+              document.querySelectorAll('[data-aside-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+              document.body.style.overflow = '';
+            }
+            return;
+          }
+
+          const menuToggle = target.closest<HTMLButtonElement>('[data-menu-toggle]');
+          if (menuToggle) {
+            const sidebar = document.getElementById('blog-sidebar');
+            const overlay = document.querySelector<HTMLElement>('[data-sidebar-overlay]');
+            const asideTrack = document.querySelector<HTMLElement>('.blog-aside-track');
+            const isOpen = sidebar?.classList.contains('is-open');
+
+            if (!isOpen) {
+              asideTrack?.classList.remove('is-open');
+              document.querySelectorAll('[data-aside-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+              sidebar?.classList.add('is-open');
+              overlay?.classList.add('is-visible');
+              document.querySelectorAll('[data-menu-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'true'));
+              document.body.style.overflow = 'hidden';
+            } else {
+              sidebar?.classList.remove('is-open');
+              overlay?.classList.remove('is-visible');
+              document.querySelectorAll('[data-menu-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+              document.body.style.overflow = '';
+            }
+            return;
+          }
+
+          const drawerClose = target.closest('[data-sidebar-close], [data-aside-close], [data-sidebar-overlay]');
+          if (drawerClose) {
+            const sidebar = document.getElementById('blog-sidebar');
+            const asideTrack = document.querySelector<HTMLElement>('.blog-aside-track');
+            const overlay = document.querySelector<HTMLElement>('[data-sidebar-overlay]');
+            sidebar?.classList.remove('is-open');
+            asideTrack?.classList.remove('is-open');
+            overlay?.classList.remove('is-visible');
+            document.querySelectorAll('[data-menu-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+            document.querySelectorAll('[data-aside-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+            document.body.style.overflow = '';
+            return;
+          }
+
+          const navItem = target.closest('#blog-sidebar .nav-item');
+          if (navItem) {
+            const sidebar = document.getElementById('blog-sidebar');
+            const overlay = document.querySelector<HTMLElement>('[data-sidebar-overlay]');
+            sidebar?.classList.remove('is-open');
+            overlay?.classList.remove('is-visible');
+            document.querySelectorAll('[data-menu-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+            document.body.style.overflow = '';
+          }
+
+          const tocLink = target.closest<HTMLAnchorElement>('a[data-toc-link]');
+          if (tocLink) {
+            const asideTrack = document.querySelector<HTMLElement>('.blog-aside-track');
+            const overlay = document.querySelector<HTMLElement>('[data-sidebar-overlay]');
+            const isDrawerOpen = asideTrack?.classList.contains('is-open');
+
+            if (isDrawerOpen) {
+              asideTrack.classList.remove('is-open');
+              overlay?.classList.remove('is-visible');
+              document.querySelectorAll('[data-aside-toggle]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+              document.body.style.overflow = '';
+            }
+
+            const id = tocLink.dataset.tocLink;
+            const targetHeading = id ? document.getElementById(id) : null;
+            if (targetHeading) {
+              e.preventDefault();
+              const executeScroll = () => {
+                const top = targetHeading.getBoundingClientRect().top + window.scrollY - 80;
+                window.scrollTo({ top, behavior: reduceMotion() ? 'auto' : 'smooth' });
+              };
+              if (isDrawerOpen) {
+                requestAnimationFrame(executeScroll);
+              } else {
+                executeScroll();
+              }
+            }
+            return;
+          }
+
+          if (target.closest('.zoom-overlay')) closeZoom();
+        });
+
+        document.addEventListener('astro:before-swap', (e: Event) => {
+          closeZoom();
+          document.body.style.overflow = '';
+          const swapEvent = e as unknown as { newDocument: Document };
+          if (swapEvent.newDocument) {
+            const curTheme = getSavedTheme();
+            swapEvent.newDocument.documentElement.dataset.theme = curTheme;
+            swapEvent.newDocument.documentElement.style.colorScheme = isDarkMode(curTheme) ? 'dark' : 'light';
+            const curFont = rootEl.dataset.readingFont || localStorage.getItem('reading-font') || 'sans';
+            swapEvent.newDocument.documentElement.dataset.readingFont = curFont;
+          }
+        });
+
+        document.addEventListener('astro:after-swap', () => {
+          applyTheme(getSavedTheme(), false);
+          syncFontState();
+        });
+      }
+    </script>
+  </body>
+</html>

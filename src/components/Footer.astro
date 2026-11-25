@@ -1,0 +1,84 @@
+---
+import { AUTHOR, ESTABLISHED_YEAR, SITE_TITLE } from '../consts';
+import Icon from './Icon.astro';
+
+const currentYear = new Date().getFullYear();
+const copyrightYear = ESTABLISHED_YEAR >= currentYear ? `${currentYear}` : `${ESTABLISHED_YEAR}–${currentYear}`;
+const copyrightOwner = AUTHOR.name === SITE_TITLE ? AUTHOR.name : `${AUTHOR.name} · ${SITE_TITLE}`;
+---
+
+<footer class="blog-footer">
+  <div class="footer-bottom">
+    <div class="footer-meta">
+      <span>© {copyrightYear} {copyrightOwner}</span>
+      <span class="footer-sep">·</span>
+      <span>
+        <a href="https://astro.build/" target="_blank" rel="noopener noreferrer" class="footer-icon-link" title="由 Astro 构建" aria-label="Astro">
+          <Icon name="astro" />
+        </a>
+      </span>
+      <span class="footer-sep">·</span>
+      <a href="https://github.com/z2004y/blog-v3" target="_blank" rel="noopener noreferrer" class="footer-icon-link" title="主题源码 (GitHub)" aria-label="主题源码">
+        <Icon name="theme" />
+      </a>
+    </div>
+    <div class="hitokoto-wrap" data-hitokoto title="点击换一句一言">
+      <span class="hitokoto-text">保持好奇，保持清醒。</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  let fetching = false;
+
+  async function updateHitokoto(wrap: HTMLElement) {
+    if (fetching) return;
+    const textEl = wrap.querySelector<HTMLElement>('.hitokoto-text');
+    if (!textEl) return;
+
+    fetching = true;
+    wrap.classList.add('is-loading');
+
+    try {
+      const res = await fetch(`https://v1.hitokoto.cn?encode=json&charset=utf-8&_t=${Date.now()}`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) throw new Error('Hitokoto fetch failed');
+      const data = await res.json();
+      const sentence = data.hitokoto;
+      const from = data.from_who ? `${data.from_who} · 《${data.from}》` : (data.from ? `《${data.from}》` : '');
+      textEl.textContent = `「${sentence}」${from ? ` —— ${from}` : ''}`;
+      wrap.setAttribute('title', `来源：${from || '一言'}（点击换一句）`);
+    } catch (err) {
+      // 网络异常时保留已有内容
+    } finally {
+      fetching = false;
+      wrap.classList.remove('is-loading');
+    }
+  }
+
+  function initHitokoto() {
+    const wrap = document.querySelector<HTMLElement>('[data-hitokoto]');
+    if (!wrap) return;
+    if (wrap.dataset.hitokotoLoaded !== '1') {
+      wrap.dataset.hitokotoLoaded = '1';
+      updateHitokoto(wrap);
+    }
+  }
+
+  // 全局事件委托：确保客户端无刷新跳转或 DOM 重建后点击换词依然 100% 生效
+  document.addEventListener('click', (e) => {
+    const wrap = (e.target as HTMLElement)?.closest<HTMLElement>('[data-hitokoto]');
+    if (wrap) {
+      e.preventDefault();
+      updateHitokoto(wrap);
+    }
+  });
+
+  document.addEventListener('astro:page-load', initHitokoto);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHitokoto);
+  } else {
+    initHitokoto();
+  }
+</script>

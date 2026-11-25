@@ -1,0 +1,61 @@
+---
+interface Props {
+  name: string;
+  class?: string;
+}
+
+const { name, class: className } = Astro.props;
+
+const paths: Record<string, string> = {
+  home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M9.5 20v-6h5v6"/>',
+  files: '<path d="M8 3h8l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M16 3v5h4"/><path d="M10 13h6"/><path d="M10 17h4"/>',
+  archive: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/>',
+  monitor: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  close: '<path d="m18 6-12 12M6 6l12 12"/>',
+  'chevron-left': '<path d="m15 18-6-6 6-6"/>',
+  'chevron-right': '<path d="m9 18 6-6-6-6"/>',
+  'arrow-up-right': '<path d="M7 17 17 7M9 7h8v8"/>',
+  top: '<path d="m6 14 6-6 6 6"/><path d="M4 20h16"/>',
+  sidebar: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16"/>',
+  toc: '<path d="M3 5h18M7 12h14M3 19h18"/><circle cx="3.5" cy="12" r="1.5" fill="currentColor" stroke="none"/>',
+  sort: '<path d="M4 7h11M4 12h8M4 17h5"/><path d="m17 9 3 3 3-3"/>',
+  github: '<path fill="currentColor" stroke="none" d="M12 2A10 10 0 0 0 8.84 21.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5A10 10 0 0 0 12 2Z"/>',
+  wechat: '<path fill="currentColor" stroke="none" d="M9 3.5C4.58 3.5 1 6.55 1 10.3c0 2.11 1.12 3.99 2.87 5.22L3.1 18.7l3.38-1.35c.78.2 1.6.3 2.45.3.33 0 .65-.02.97-.06-.31-.7-.48-1.47-.48-2.29 0-3.48 3.13-6.3 7-6.3.36 0 .72.03 1.06.08C17.3 5.92 13.5 3.5 9 3.5Zm-2.2 4a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6Zm4.8 0a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6ZM16.5 11c-3.31 0-6 2.24-6 5s2.69 5 6 5c.68 0 1.33-.1 1.94-.28l2.64 1.05-.67-2.37c1.37-.99 2.22-2.39 2.22-3.9 0-2.76-2.69-5-6-5Zm-2.1 3.25a1.05 1.05 0 1 1 0 2.1 1.05 1.05 0 0 1 0-2.1Zm4.2 0a1.05 1.05 0 1 1 0 2.1 1.05 1.05 0 0 1 0-2.1Z"/>',
+  linuxdo: '<rect x="3" y="3" width="18" height="18" rx="5.5" stroke-width="1.8"/><path d="M8.5 7.5v9h7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17.2" cy="16.5" r="1.3" fill="currentColor" stroke="none"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  rss: '<path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>',
+  leaf: '<path d="M20 4C9 4 4 9 4 15a5 5 0 0 0 5 5c6 0 11-5 11-16Z"/><path d="M4 20c3-5 7-8 12-10"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  pencil: '<path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"/><path d="m14.5 6.5 3 3"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  check: '<path d="m5 13 4 4L19 7"/>',
+  tag: '<path d="M20.6 13.4 12 22l-9-9V4h9l8.6 8.6a1.4 1.4 0 0 1 0 1.8Z"/><circle cx="7.5" cy="7.5" r="1"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+  sparkles: '<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/>',
+  astro: '<path fill="currentColor" stroke="none" d="M8.358 20.162c-1.186-1.07-1.536-2.555-1.2-3.854 1.22 1.09 2.578 1.487 3.992.837 1.54-.707 2.457-2.146 2.37-3.834-.044-.823-.337-1.58-.87-2.195l-.117-.118-.088.14a2.9 2.9 0 0 1-.97 1.004c-1.08.68-2.316.59-3.23-.27a3.02 3.02 0 0 1-.954-2.14c-.066-1.547.88-2.923 2.31-3.364l.216-.062-.162-.15C8.36 4.908 6.91 4.545 5.568 5.093c-2.023.826-3.272 2.77-3.13 4.887.218 3.25 2.194 6.786 5.92 10.182zm7.284-16.324a.8.8 0 0 0-.742.493L9.82 17.514h2.155l1.09-3.266h5.87l1.09 3.266h2.155L17.1 4.331a.8.8 0 0 0-.742-.493h-.716zm.358 3.518l2.25 6.74h-4.5l2.25-6.74z"/>',
+  theme: '<path d="M12 21a9 9 0 0 1 0-18c4.97 0 9 3.58 9 8 0 1.06-.47 2.08-1.32 2.83-.84.75-1.99 1.17-3.18 1.17h-2.5a2 2 0 0 0-1 3.75 1.3 1.3 0 0 1-.5 1.25 2 2 0 0 1-1.5 1"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor"/><circle cx="12" cy="7.5" r="1" fill="currentColor"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor"/>',
+  hash: '<path d="M5 9h14M4 15h14M10 3 8 21M16 3l-2 18"/>',
+  font: '<path d="M4 7V4h16v3M9 20h6M12 4v16"/>',
+  circle: '<circle cx="12" cy="12" r="8"/>',
+};
+
+const path = paths[name] ?? paths.circle;
+---
+
+<svg
+  class:list={['icon', className]}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  focusable="false"
+  set:html={path}
+/>

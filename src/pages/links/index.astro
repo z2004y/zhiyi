@@ -1,0 +1,274 @@
+---
+import { AUTHOR, FRIEND_LINKS, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from '../../consts';
+import Icon from '../../components/Icon.astro';
+import SiteLayout from '../../layouts/SiteLayout.astro';
+
+const groups = new Map<string, typeof FRIEND_LINKS>();
+for (const friend of FRIEND_LINKS) {
+  groups.set(friend.group, [...(groups.get(friend.group) ?? []), friend]);
+}
+
+const currentOrigin = Astro.site?.origin ?? SITE_URL;
+const fullAvatarUrl = `${currentOrigin}${AUTHOR.avatar}`;
+---
+
+<SiteLayout title="友链" description="一些值得常去的小站与资源，也欢迎交换友链。">
+  {
+    [...groups.entries()].map(([group, friends]) => (
+      <section class="friend-section">
+        <div class="friend-section-title">
+          <h2>{group}</h2>
+          <span>{friends.length} 个站点</span>
+        </div>
+        <div class="friend-grid">
+          {friends.map((friend) => (
+            <a
+              class="friend-card"
+              href={friend.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`访问 ${friend.name}`}
+            >
+              <span
+                class="friend-avatar"
+                style={`--friend-color:${friend.color}`}
+                aria-hidden="true"
+              >
+                {friend.avatar ? (
+                  <img src={friend.avatar} alt="" width="44" height="44" loading="lazy" />
+                ) : (
+                  friend.name.slice(0, 1)
+                )}
+              </span>
+              <span class="friend-body">
+                <strong>{friend.name}</strong>
+                <small>{friend.description}</small>
+              </span>
+              <Icon name="arrow-up-right" class="friend-arrow" />
+            </a>
+          ))}
+        </div>
+      </section>
+    ))
+  }
+
+  <section class="exchange-section" aria-labelledby="exchange-title">
+    <div class="exchange-header">
+      <div class="exchange-header-title">
+        <Icon name="link" />
+        <h2 id="exchange-title">交换友链</h2>
+      </div>
+      <p class="exchange-subtitle">
+        愿所有的相遇，都是久别重逢。欢迎交换友链，共同构筑纯粹的独立博客网络。
+      </p>
+    </div>
+
+    <div class="exchange-card">
+      <div class="exchange-tabs" role="tablist" aria-label="友链互换导航">
+        <button
+          type="button"
+          class="exchange-tab is-active"
+          role="tab"
+          aria-selected="true"
+          data-tab="my-info"
+          id="tab-my-info"
+        >
+          <Icon name="user" />
+          <span>本站信息</span>
+        </button>
+        <button
+          type="button"
+          class="exchange-tab"
+          role="tab"
+          aria-selected="false"
+          data-tab="rules"
+          id="tab-rules"
+        >
+          <Icon name="check" />
+          <span>申请原则</span>
+        </button>
+        <button
+          type="button"
+          class="exchange-tab"
+          role="tab"
+          aria-selected="false"
+          data-tab="template"
+          id="tab-template"
+        >
+          <Icon name="copy" />
+          <span>申请模板</span>
+        </button>
+      </div>
+
+      <div class="exchange-content">
+        <!-- Tab 1: 本站信息 -->
+        <div class="exchange-panel is-active" data-panel="my-info" role="tabpanel" aria-labelledby="tab-my-info">
+          <div class="my-info-grid">
+            <div class="my-preview-card">
+              <img src={AUTHOR.avatar} alt={SITE_TITLE} class="my-preview-avatar" width="52" height="52" loading="lazy" />
+              <div class="my-preview-meta">
+                <div class="my-preview-top">
+                  <strong class="my-preview-name">{SITE_TITLE}</strong>
+                  <span class="my-preview-badge">本站卡片</span>
+                </div>
+                <div class="my-preview-url">{SITE_URL}</div>
+                <p class="my-preview-desc">{SITE_DESCRIPTION}</p>
+              </div>
+            </div>
+
+            <div class="copy-field-list">
+              <div class="copy-field-item">
+                <span class="field-label">博客名称</span>
+                <span class="field-val">{SITE_TITLE}</span>
+                <button type="button" class="btn-copy-field" data-copy-btn={SITE_TITLE} aria-label="复制名称">
+                  <Icon name="copy" />
+                  <span>复制</span>
+                </button>
+              </div>
+              <div class="copy-field-item">
+                <span class="field-label">博客网址</span>
+                <span class="field-val">{SITE_URL}</span>
+                <button type="button" class="btn-copy-field" data-copy-btn={SITE_URL} aria-label="复制网址">
+                  <Icon name="copy" />
+                  <span>复制</span>
+                </button>
+              </div>
+              <div class="copy-field-item">
+                <span class="field-label">博客头像</span>
+                <span class="field-val">{fullAvatarUrl}</span>
+                <button type="button" class="btn-copy-field" data-copy-btn={fullAvatarUrl} aria-label="复制头像链接">
+                  <Icon name="copy" />
+                  <span>复制</span>
+                </button>
+              </div>
+              <div class="copy-field-item">
+                <span class="field-label">博客简介</span>
+                <span class="field-val">{SITE_DESCRIPTION}</span>
+                <button type="button" class="btn-copy-field" data-copy-btn={SITE_DESCRIPTION} aria-label="复制简介">
+                  <Icon name="copy" />
+                  <span>复制</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: 申请原则 -->
+        <div class="exchange-panel" data-panel="rules" role="tabpanel" aria-labelledby="tab-rules" hidden>
+          <div class="rules-list">
+            <div class="rule-item">
+              <div class="rule-icon"><Icon name="check" /></div>
+              <div class="rule-body">
+                <strong>持续维护与原创输出</strong>
+                <p>稳定运行 3 个月以上，能够持续输出有价值的技术探索、生活随笔或独立思考内容。</p>
+              </div>
+            </div>
+            <div class="rule-item">
+              <div class="rule-icon"><Icon name="link" /></div>
+              <div class="rule-body">
+                <strong>全站 HTTPS 与访问通畅</strong>
+                <p>站点可正常稳定打开，已配置有效 SSL 证书，无侵入式弹窗广告、防红拦截或非法内容。</p>
+              </div>
+            </div>
+            <div class="rule-item">
+              <div class="rule-icon"><Icon name="user" /></div>
+              <div class="rule-body">
+                <strong>先友后链，互相尊重</strong>
+                <p>申请前请先在贵站添加本站友链，核实无误后通常会在 24 小时内完成双向互换。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: 申请模板 -->
+        <div class="exchange-panel" data-panel="template" role="tabpanel" aria-labelledby="tab-template" hidden>
+          <p class="template-tip">在贵站添加本站后，可直接复制下方标准格式发送邮件申请：</p>
+          <div class="template-code-box">
+            <pre class="template-pre"><code>{`name: 你的博客名称
+link: https://your-domain.com/
+avatar: https://your-domain.com/avatar.jpg
+descr: 你的博客一句话简介`}</code></pre>
+            <button type="button" class="btn-copy-template" data-copy-template aria-label="一键复制申请模板">
+              <Icon name="copy" />
+              <span>复制申请模板</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</SiteLayout>
+
+<script>
+  function initExchangeTabs() {
+    const root = document.querySelector<HTMLElement>('.exchange-card');
+    if (!root || root.dataset.init === '1') return;
+    root.dataset.init = '1';
+
+    const tabs = root.querySelectorAll<HTMLButtonElement>('.exchange-tab');
+    const panels = root.querySelectorAll<HTMLElement>('.exchange-panel');
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const target = tab.dataset.tab;
+        tabs.forEach((t) => {
+          const isActive = t === tab;
+          t.classList.toggle('is-active', isActive);
+          t.setAttribute('aria-selected', String(isActive));
+        });
+        panels.forEach((p) => {
+          const isActive = p.dataset.panel === target;
+          p.classList.toggle('is-active', isActive);
+          p.hidden = !isActive;
+        });
+      });
+    });
+
+    // 字段快速复制
+    root.querySelectorAll<HTMLButtonElement>('[data-copy-btn]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const text = btn.dataset.copyBtn;
+        if (!text) return;
+        try {
+          await navigator.clipboard.writeText(text);
+          const label = btn.querySelector('span');
+          const orig = label?.textContent || '复制';
+          if (label) label.textContent = '已复制';
+          btn.classList.add('is-copied');
+          document.dispatchEvent(new CustomEvent('site-toast', { detail: { message: `已复制：${text}` } }));
+          setTimeout(() => {
+            if (label) label.textContent = orig;
+            btn.classList.remove('is-copied');
+          }, 1800);
+        } catch {
+          window.prompt('复制内容：', text);
+        }
+      });
+    });
+
+    // 模板一键复制
+    const templateBtn = root.querySelector<HTMLButtonElement>('[data-copy-template]');
+    const templatePre = root.querySelector<HTMLElement>('.template-pre code');
+    templateBtn?.addEventListener('click', async () => {
+      const text = templatePre?.textContent || '';
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        const label = templateBtn.querySelector('span');
+        if (label) label.textContent = '已复制模板';
+        templateBtn.classList.add('is-copied');
+        document.dispatchEvent(new CustomEvent('site-toast', { detail: { message: '申请模板已复制到剪贴板' } }));
+        setTimeout(() => {
+          if (label) label.textContent = '复制申请模板';
+          templateBtn.classList.remove('is-copied');
+        }, 1800);
+      } catch {
+        window.prompt('复制申请模板：', text);
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initExchangeTabs);
+  if (document.readyState !== 'loading') initExchangeTabs();
+  else document.addEventListener('DOMContentLoaded', initExchangeTabs, { once: true });
+</script>

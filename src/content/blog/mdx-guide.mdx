@@ -1,0 +1,34 @@
+---
+title: 在 Astro 里写 MDX 的小技巧
+description: 让 Markdown 保持简单，同时在需要时插入一点组件能力。
+pubDate: '2026-04-10'
+heroImage: '../../assets/covers/mdx.webp'
+category: 开发
+tags: [MDX, Astro, 内容]
+---
+
+MDX 的价值在于：绝大多数时候写 Markdown，少数时候插入组件。不要把它当成一个完整的模板引擎。
+
+## 保持内容可移植
+
+正文尽量只使用标准 Markdown 语法。这样即使将来换框架，文章仍然可读、可迁移。
+
+## 需要时再引入组件
+
+比如一个提示块，可以在 MDX 里直接写：
+
+```mdx
+import Callout from '../../components/Callout.astro';
+
+<Callout type="tip">
+  这是一个提示块。
+</Callout>
+```
+
+## 注意标题层级
+
+目录是根据 `h2`、`h3` 生成的。文章内不要跳过层级，否则目录结构会变得奇怪。标题文字也尽量简短，太长会挤满右侧栏。
+
+## 最后
+
+内容是主角，MDX 只是工具。写起来越安静，读者越容易进入文章。

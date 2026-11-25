@@ -1,0 +1,19 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+---
+
+<SiteLayout title="页面未找到" description="你访问的页面不存在。">
+  <section class="hero" style="text-align:center">
+    <div class="hero-inner" style="max-width:none">
+      <span class="hero-kicker">404 · Lost in the fog</span>
+      <h1 class="hero-title">这里没有你要找的页面</h1>
+      <p class="hero-description" style="margin-inline:auto">
+        也许链接已经搬家，或者它从未存在过。不如回到首页，重新出发。
+      </p>
+      <div class="hero-actions" style="justify-content:center">
+        <a class="btn btn-primary" href="/">返回首页</a>
+        <a class="btn btn-ghost" href="/blog">查看文章</a>
+      </div>
+    </div>
+  </section>
+</SiteLayout>

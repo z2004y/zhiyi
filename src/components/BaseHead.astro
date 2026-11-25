@@ -1,0 +1,80 @@
+---
+import '../styles/global.css';
+import type { ImageMetadata } from 'astro';
+import { ClientRouter } from 'astro:transitions';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: ImageMetadata;
+}
+
+const {
+  title = SITE_TITLE,
+  description = SITE_DESCRIPTION,
+  image,
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
+const ogImage = image
+  ? new URL(image.src, Astro.url).href
+  : new URL('/avatar.jpg', Astro.url).href;
+const fullTitle = title === SITE_TITLE ? title : `${title} · ${SITE_TITLE}`;
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#f7f9fc" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#12151b" media="(prefers-color-scheme: dark)" />
+<link rel="icon" type="image/jpeg" href="/avatar.jpg" />
+<link rel="shortcut icon" href="/avatar.jpg" />
+<link rel="apple-touch-icon" href="/avatar.jpg" />
+<link rel="sitemap" href="/sitemap-index.xml" />
+<link
+  rel="alternate"
+  type="application/rss+xml"
+  title={SITE_TITLE}
+  href={new URL('rss.xml', Astro.site ?? Astro.url)}
+/>
+<meta name="generator" content={Astro.generator} />
+<link rel="canonical" href={canonicalURL} />
+<ClientRouter fallback="none" />
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+
+<meta property="og:type" content="website" />
+<meta property="og:url" content={Astro.url} />
+<meta property="og:site_name" content={SITE_TITLE} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={ogImage} />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+
+<script is:inline>
+  (() => {
+    try {
+      const root = document.documentElement;
+      const saved = localStorage.getItem('site-theme');
+      const theme = saved === 'light' || saved === 'dark' ? saved : 'auto';
+      const savedFont = localStorage.getItem('reading-font');
+
+      root.dataset.theme = theme;
+      root.dataset.readingFont = savedFont === 'serif' ? 'serif' : 'sans';
+      root.style.colorScheme =
+        theme === 'auto'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light'
+          : theme;
+    } catch {
+      document.documentElement.dataset.theme = 'auto';
+      document.documentElement.dataset.readingFont = 'sans';
+    }
+  })();
+</script>

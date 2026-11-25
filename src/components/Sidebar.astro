@@ -1,0 +1,65 @@
+---
+import { AUTHOR, NAV_ITEMS, SITE_TITLE, SOCIAL_LINKS } from '../consts';
+import HeaderLink from './HeaderLink.astro';
+import Icon from './Icon.astro';
+import ThemeToggle from './ThemeToggle.astro';
+---
+
+<aside id="blog-sidebar" aria-label="侧边栏">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-bg" aria-hidden="true">
+      <img class="brand-bg-img" src={AUTHOR.avatar} alt="" loading="eager" />
+      <div class="brand-bg-mask"></div>
+    </div>
+    <div class="brand-avatar-wrap">
+      <img class="brand-avatar" src={AUTHOR.avatar} alt="" width="48" height="48" />
+    </div>
+    <div class="brand-info">
+      <span class="brand-title">{SITE_TITLE}</span>
+      <span class="brand-subtitle">思考 · 记录 · 分享</span>
+    </div>
+    <button class="sidebar-close" type="button" data-sidebar-close aria-label="关闭菜单">
+      <Icon name="close" />
+    </button>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="主导航">
+    <div class="search-btn sidebar-nav-item gradient-card" data-search-open role="button" tabindex="0" aria-label="搜索文章">
+      <Icon name="search" />
+      <span class="nav-text">搜索</span>
+      <kbd class="keycut">Ctrl+K</kbd>
+    </div>
+
+    <ul>
+      {
+        NAV_ITEMS.map((item) => (
+          <li>
+            <HeaderLink href={item.href} class="nav-item">
+              <Icon name={item.icon} />
+              <span>{item.label}</span>
+            </HeaderLink>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+
+  <div class="sidebar-footer">
+    <ThemeToggle />
+    <div class="social-row">
+      {
+        SOCIAL_LINKS.map((item) => (
+          <a
+            class="social-link"
+            href={item.href}
+            aria-label={item.label}
+            title={item.label}
+            rel={item.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+          >
+            <Icon name={item.icon} />
+          </a>
+        ))
+      }
+    </div>
+  </div>
+</aside>

@@ -1,0 +1,174 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import type { MarkdownHeading } from 'astro';
+import SiteLayout from './SiteLayout.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import BlogAside from '../components/BlogAside.astro';
+import Icon from '../components/Icon.astro';
+
+type Props = CollectionEntry<'blog'>['data'] & {
+  headings?: MarkdownHeading[];
+  readingMinutes?: number;
+  wordCount?: number;
+};
+
+const {
+  title,
+  description,
+  pubDate,
+  updatedDate,
+  heroImage,
+  category,
+  tags = [],
+  headings = [],
+  readingMinutes,
+  wordCount,
+} = Astro.props;
+
+const tocHeadings = headings.filter(
+  (h) => (h.depth === 2 || h.depth === 3 || h.depth === 4) && h.slug !== 'footnote-label',
+);
+---
+
+<SiteLayout title={title} description={description} image={heroImage} isPost={true}>
+  <article class="post-article">
+    <div class="post-top-bar">
+      <button class="post-sidebar-btn" type="button" data-menu-toggle aria-label="打开导航侧边栏" title="展开侧边栏">
+        <Icon name="sidebar" />
+        <span class="btn-text">菜单</span>
+      </button>
+      <nav class="post-breadcrumb" aria-label="面包屑导航">
+        <a href="/" class="crumb-link">首页</a>
+        <span class="crumb-sep">/</span>
+        <a href="/blog" class="crumb-link">文章</a>
+        {
+          category && (
+            <>
+              <span class="crumb-sep">/</span>
+              <a href={`/blog?category=${encodeURIComponent(category)}`} class="crumb-link crumb-category">
+                {category}
+              </a>
+            </>
+          )
+        }
+      </nav>
+      <div class="post-top-actions">
+        <button
+          class="post-font-btn"
+          type="button"
+          data-font-toggle
+          aria-label="切换排版风格：现代 / 书页"
+          title="切换排版：现代（黑体） / 书页（衬线）"
+        >
+          <Icon name="font" />
+          <span class="btn-text" data-font-label>现代</span>
+        </button>
+
+        {
+          tocHeadings.length > 0 && (
+            <button class="post-aside-btn hide-above-tablet" type="button" data-aside-toggle aria-label="打开文章目录" title="展开文章目录">
+              <Icon name="toc" />
+              <span class="btn-text">目录</span>
+            </button>
+          )
+        }
+      </div>
+    </div>
+
+    {
+      heroImage && (
+        <div class="hero-image">
+          <Image width={1020} height={510} src={heroImage} alt={title} loading="eager" />
+        </div>
+      )
+    }
+
+    <div class="prose">
+      <header class="title">
+        <h1 class="post-title">{title}</h1>
+
+        {
+          tags && tags.length > 0 && (
+            <div class="post-tags" aria-label="文章标签">
+              {tags.map((tag) => (
+                <a class="post-tag" href={`/tags/${encodeURIComponent(tag)}/`}>
+                  #{tag}
+                </a>
+              ))}
+            </div>
+          )
+        }
+
+        <div class="post-meta">
+          <span class="meta-item meta-date">
+            <FormattedDate date={pubDate} />
+          </span>
+          {
+            updatedDate && updatedDate.valueOf() !== pubDate.valueOf() && (
+              <span class="meta-item meta-updated">
+                （更新于 <FormattedDate date={updatedDate} />）
+              </span>
+            )
+          }
+          {
+            category && (
+              <>
+                <span class="meta-sep" aria-hidden="true">·</span>
+                <a class="meta-item meta-category" href={`/blog?category=${encodeURIComponent(category)}`}>
+                  {category}
+                </a>
+              </>
+            )
+          }
+          {
+            typeof wordCount === 'number' && wordCount > 0 && (
+              <>
+                <span class="meta-sep" aria-hidden="true">·</span>
+                <span class="meta-item meta-words">{wordCount.toLocaleString()} 字</span>
+              </>
+            )
+          }
+          {
+            typeof readingMinutes === 'number' && readingMinutes > 0 && (
+              <>
+                <span class="meta-sep" aria-hidden="true">·</span>
+                <span class="meta-item meta-reading">约 {readingMinutes} 分钟</span>
+              </>
+            )
+          }
+        </div>
+      </header>
+
+      {
+        tocHeadings.length > 0 && (
+          <details class="article-toc-inline hide-above-tablet">
+            <summary class="toc-inline-summary">
+              <span class="toc-inline-title">
+                <Icon name="toc" />
+                <span>文章目录</span>
+              </span>
+              <span class="toc-inline-count">共 {tocHeadings.length} 节</span>
+            </summary>
+            <nav class="toc-inline-nav" aria-label="文章目录">
+              <ol class="toc-inline-list">
+                {tocHeadings.map((h) => (
+                  <li class={`toc-inline-item depth-${h.depth}`}>
+                    <a href={`#${h.slug}`} data-toc-link={h.slug}>{h.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          </details>
+        )
+      }
+
+      <slot />
+    </div>
+  </article>
+
+  <BlogAside
+    slot="aside"
+    headings={headings}
+  />
+</SiteLayout>

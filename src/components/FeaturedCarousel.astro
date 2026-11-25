@@ -1,0 +1,75 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import FormattedDate from './FormattedDate.astro';
+
+interface Props {
+  posts: CollectionEntry<'blog'>[];
+}
+
+const { posts } = Astro.props;
+---
+
+{
+  posts.length > 0 && (
+    <section class="featured z-slide" aria-labelledby="featured-title">
+      <div class="featured-header z-slide-header">
+        <div class="featured-title-wrap">
+          <h2 class="featured-title title text-creative" id="featured-title">精选文章</h2>
+        </div>
+      </div>
+
+      <div class="featured-body-wrap">
+        <div class="featured-viewport z-slide-body" data-carousel-viewport dir="ltr">
+          <div class="slide-list">
+            {posts.map((post) => (
+              <a
+                class="featured-item slide-item"
+                href={`/blog/${post.id}/`}
+                title={post.data.description || post.data.title}
+              >
+                {post.data.heroImage && (
+                  <Image class="cover" src={post.data.heroImage} alt="" width={720} height={450} loading="lazy" />
+                )}
+                <div class="stable-info text-creative">
+                  <span class="featured-item-title">{post.data.title}</span>
+                </div>
+                <div class="hover-info">
+                  <div class="title text-creative">{post.data.title}</div>
+                  <div class="desc">
+                    <span class="category-tag">{post.data.category}</span>
+                    <FormattedDate date={post.data.pubDate} />
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+<script>
+  function initCarousel() {
+    document.querySelectorAll<HTMLElement>('[data-carousel-viewport]').forEach((viewport) => {
+      if (viewport.dataset.carouselInit === '1') return;
+      viewport.dataset.carouselInit = '1';
+
+      // 滚轮直接平滑横向滚动支持 (参考 blog.linux-qitong.top / Slide.vue)
+      viewport.addEventListener(
+        'wheel',
+        (e: WheelEvent) => {
+          const delta = e.deltaX !== 0 ? e.deltaX : (e.shiftKey ? e.deltaY : e.deltaY * 0.7);
+          if (Math.abs(delta) < 15) return;
+          viewport.scrollBy({ left: delta, behavior: 'auto' });
+        },
+        { passive: true }
+      );
+    });
+  }
+
+  document.addEventListener('astro:page-load', initCarousel);
+  if (document.readyState !== 'loading') initCarousel();
+  else document.addEventListener('DOMContentLoaded', initCarousel, { once: true });
+</script>

@@ -1,0 +1,67 @@
+---
+import { type CollectionEntry, getCollection } from 'astro:content';
+import { categoryColor } from '../../consts';
+import SiteLayout from '../../layouts/SiteLayout.astro';
+
+interface Props {
+  tag: string;
+  posts: CollectionEntry<'blog'>[];
+}
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  const tags = [...new Set(posts.flatMap((post) => post.data.tags))];
+
+  return tags.map((tag) => ({
+    params: { tag },
+    props: {
+      tag,
+      posts: posts
+        .filter((post) => post.data.tags.includes(tag))
+        .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
+    },
+  }));
+}
+
+const { tag, posts } = Astro.props;
+
+const groups = new Map<number, typeof posts>();
+for (const post of posts) {
+  const year = post.data.pubDate.getFullYear();
+  groups.set(year, [...(groups.get(year) ?? []), post]);
+}
+
+const dateFormat = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' });
+---
+
+<SiteLayout title={`标签：${tag}`} description={`标签「${tag}」下的全部文章。`}>
+  <div class="tag-title-bar">
+    <h1>#{tag}</h1>
+    <span class="tag-title-meta">共 {posts.length} 篇 · <a href="/tags">所有标签 →</a></span>
+  </div>
+
+  {
+    [...groups.entries()].map(([year, yearPosts]) => (
+      <section class="archive-year">
+        <h2>
+          <span>{year}</span>
+          <span class="archive-count">{yearPosts.length} 篇</span>
+        </h2>
+        <div class="archive-list">
+          {yearPosts.map((post) => (
+            <a class="archive-item" href={`/blog/${post.id}/`}>
+              <time datetime={post.data.pubDate.toISOString()}>
+                {dateFormat.format(post.data.pubDate)}
+              </time>
+              <span class="archive-title">{post.data.title}</span>
+              <span class="category-name">
+                <span class="category-dot" style={`--dot:${categoryColor(post.data.category)}`} />
+                {post.data.category}
+              </span>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))
+  }
+</SiteLayout>

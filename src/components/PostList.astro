@@ -1,0 +1,65 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import ArticleCard from './ArticleCard.astro';
+import Icon from './Icon.astro';
+
+interface Props {
+  posts: CollectionEntry<'blog'>[];
+}
+
+const { posts } = Astro.props;
+const categories = [...new Set(posts.map((post) => post.data.category))];
+const categoryCounts = categories.map((cat) => ({
+  name: cat,
+  count: posts.filter((p) => p.data.category === cat).length,
+}));
+---
+
+<section class="post-list" data-post-list data-view="list" data-page-size="6" data-sort-mode="date" aria-label="文章列表">
+  <div class="post-toolbar">
+    <div class="filter-group" role="group" aria-label="按分类筛选">
+      <span class="toolbar-label"><Icon name="tag" /> 分类</span>
+      <button class="chip" type="button" data-filter="all" aria-pressed="true">
+        全部 <span class="chip-count">{posts.length}</span>
+      </button>
+      {
+        categoryCounts.map((category) => (
+          <button class="chip" type="button" data-filter={category.name} aria-pressed="false">
+            {category.name} <span class="chip-count">{category.count}</span>
+          </button>
+        ))
+      }
+    </div>
+    <div class="sort-group" role="group" aria-label="排序">
+      <span class="toolbar-label"><Icon name="clock" /> 排序</span>
+      <button class="chip" type="button" data-sort="date" aria-pressed="true">最新发布</button>
+      <button class="chip" type="button" data-sort="updated" aria-pressed="false">最近更新</button>
+      <button
+        class="chip chip-icon"
+        type="button"
+        data-sort-direction
+        aria-label="切换升序或降序"
+        title="切换升降序"
+      >
+        <Icon name="sort" />
+      </button>
+    </div>
+  </div>
+
+  <div class="post-grid" data-post-grid>
+    {posts.map((post, index) => <ArticleCard post={post} index={index} />)}
+  </div>
+
+  <p class="empty-state" data-empty-state hidden>这个分类下还没有文章，换个分类看看吧。</p>
+
+  <!-- Zhilu 风格吸底分页导航条 -->
+  <nav class="pagination sticky" data-pagination aria-label="文章分页" hidden>
+    <button class="pagination-button" data-page-prev disabled aria-label="上一页" title="上一页">
+      <Icon name="chevron-left" />
+    </button>
+    <div class="pagination-pages" data-page-numbers></div>
+    <button class="pagination-button" data-page-next aria-label="下一页" title="下一页">
+      <Icon name="chevron-right" />
+    </button>
+  </nav>
+</section>

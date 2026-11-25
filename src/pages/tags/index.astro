@@ -1,0 +1,26 @@
+---
+import { getCollection } from 'astro:content';
+import Icon from '../../components/Icon.astro';
+import SiteLayout from '../../layouts/SiteLayout.astro';
+
+const posts = await getCollection('blog');
+const counts = new Map<string, number>();
+posts.forEach((post) => {
+  post.data.tags.forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
+});
+const tags = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh-CN'));
+---
+
+<SiteLayout title="标签" description="按标签浏览所有文章。">
+  <div class="tag-cloud">
+    {
+      tags.map(([tag, count]) => (
+        <a class="tag-cloud-item" href={`/tags/${encodeURIComponent(tag)}/`}>
+          <Icon name="tag" />
+          <span>{tag}</span>
+          <small>{count}</small>
+        </a>
+      ))
+    }
+  </div>
+</SiteLayout>

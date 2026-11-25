@@ -1,0 +1,121 @@
+---
+import type { MarkdownHeading } from 'astro';
+import Icon from './Icon.astro';
+
+interface Props {
+  headings?: MarkdownHeading[];
+}
+
+const { headings = [] } = Astro.props;
+
+interface TocItem {
+  depth: number;
+  slug: string;
+  text: string;
+  children: TocItem[];
+}
+
+function buildTocTree(rawHeadings: MarkdownHeading[]): TocItem[] {
+  const filtered = rawHeadings.filter(
+    (h) => (h.depth === 2 || h.depth === 3 || h.depth === 4) && h.slug !== 'footnote-label'
+  );
+  const root: TocItem[] = [];
+  let currentH2: TocItem | null = null;
+  let currentH3: TocItem | null = null;
+
+  for (const h of filtered) {
+    const item: TocItem = {
+      depth: h.depth,
+      slug: h.slug,
+      text: h.text,
+      children: [],
+    };
+
+    if (h.depth === 2) {
+      root.push(item);
+      currentH2 = item;
+      currentH3 = null;
+    } else if (h.depth === 3) {
+      if (currentH2) {
+        currentH2.children.push(item);
+      } else {
+        root.push(item);
+      }
+      currentH3 = item;
+    } else if (h.depth === 4) {
+      if (currentH3) {
+        currentH3.children.push(item);
+      } else if (currentH2) {
+        currentH2.children.push(item);
+      } else {
+        root.push(item);
+      }
+    }
+  }
+
+  return root;
+}
+
+const tocTree = buildTocTree(headings);
+const totalHeadings = headings.filter((h) => h.depth >= 2 && h.depth <= 4).length;
+---
+
+{
+  totalHeadings > 0 && (
+    <div class="toc-aside-group" aria-label="文章目录">
+      <div class="aside-drawer-header hide-above-tablet">
+        <div class="drawer-title">
+          <Icon name="toc" />
+          <span>文章目录</span>
+        </div>
+        <button class="drawer-close-btn" type="button" data-aside-close aria-label="关闭目录">
+          <Icon name="close" />
+        </button>
+      </div>
+
+      <!-- 一体化紧凑目录卡片 -->
+      <section class="widget widget--toc widget-compact-toc" aria-labelledby="toc-title">
+        <div class="widget-header">
+          <div class="widget-header-title">
+            <Icon name="hash" />
+            <span id="toc-title">文章目录</span>
+          </div>
+        </div>
+
+        <div class="toc-body" data-toc-body>
+          <ol class="toc">
+            {tocTree.map((h2) => (
+              <li data-toc-item={h2.slug}>
+                <a href={`#${h2.slug}`} data-toc-link={h2.slug} title={h2.text}>
+                  {h2.text}
+                </a>
+                {h2.children.length > 0 && (
+                  <ol>
+                    {h2.children.map((h3) => (
+                      <li data-toc-item={h3.slug}>
+                        <a href={`#${h3.slug}`} data-toc-link={h3.slug} title={h3.text}>
+                          {h3.text}
+                        </a>
+                        {h3.children.length > 0 && (
+                          <ol>
+                            {h3.children.map((h4) => (
+                              <li data-toc-item={h4.slug}>
+                                <a href={`#${h4.slug}`} data-toc-link={h4.slug} title={h4.text}>
+                                  {h4.text}
+                                </a>
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+    </div>
+  )
+}

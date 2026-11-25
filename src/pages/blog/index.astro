@@ -1,0 +1,13 @@
+---
+import { getCollection } from 'astro:content';
+import PostList from '../../components/PostList.astro';
+import SiteLayout from '../../layouts/SiteLayout.astro';
+
+const posts = (await getCollection('blog')).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+---
+
+<SiteLayout title="文章" description="按分类浏览所有文章，支持按发布时间或更新时间排序。">
+  <PostList posts={posts} />
+</SiteLayout>
