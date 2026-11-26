@@ -1,0 +1,317 @@
+---
+import '@waline/client/style';
+import { WALINE_CONFIG } from '../consts';
+import Icon from './Icon.astro';
+
+interface Props {
+  path?: string;
+  title?: string;
+}
+
+const { path, title = '参与讨论' } = Astro.props;
+const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.trim());
+---
+
+<section class="waline-section" aria-label="评论区">
+  <div class="waline-header">
+    <div class="waline-title-wrap">
+      <Icon name="comment" />
+      <h2 class="waline-title">{title}</h2>
+    </div>
+    <span class="waline-note">支持 Markdown 语法与表情互动</span>
+  </div>
+
+  {
+    hasServer ? (
+      <div
+        id="waline"
+        class="waline-container"
+        data-server-url={WALINE_CONFIG.serverURL}
+        data-path={path || ''}
+        data-lang={WALINE_CONFIG.lang}
+        data-placeholder={WALINE_CONFIG.placeholder}
+        data-pageview={WALINE_CONFIG.pageview ? 'true' : 'false'}
+        data-comment={WALINE_CONFIG.comment ? 'true' : 'false'}
+        data-pagesize={WALINE_CONFIG.pageSize}
+        data-emojis={JSON.stringify(WALINE_CONFIG.emoji)}
+      />
+    ) : (
+      <div class="waline-placeholder-card">
+        <div class="placeholder-icon">
+          <Icon name="chat" />
+        </div>
+        <div class="placeholder-content">
+          <h3>评论系统待接入</h3>
+          <p>
+            Vercel 服务端部署完成后，请在 <code>src/consts.ts</code> 中的 <code>WALINE_CONFIG.serverURL</code> 填入您的 Waline 服务端域名（例如 <code>https://comment.660881.xyz</code>），即可立即开启评论互动！
+          </p>
+        </div>
+      </div>
+    )
+  }
+</section>
+
+{
+  hasServer && (
+    <script>
+      import { init } from '@waline/client/full';
+
+      let walineInstance: ReturnType<typeof init> | null = null;
+      let themeObserver: MutationObserver | null = null;
+      let mediaQuery: MediaQueryList | null = null;
+
+      function isDarkMode(): boolean {
+        const docTheme = document.documentElement.dataset.theme;
+        if (docTheme === 'dark') return true;
+        if (docTheme === 'light') return false;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+
+      function setupWaline() {
+        const el = document.getElementById('waline');
+        if (!el) return;
+
+        // 清理旧实例
+        if (walineInstance) {
+          try {
+            walineInstance.destroy();
+          } catch {
+            // ignore
+          }
+          walineInstance = null;
+        }
+
+        const serverURL = el.dataset.serverUrl || '';
+        if (!serverURL) return;
+
+        const path = el.dataset.path || window.location.pathname;
+        const lang = el.dataset.lang || 'zh-CN';
+        const placeholder = el.dataset.placeholder || '';
+        const pageSize = Number(el.dataset.pagesize) || 10;
+        let emoji: string[] = [];
+        try {
+          emoji = JSON.parse(el.dataset.emojis || '[]');
+        } catch {
+          emoji = [];
+        }
+
+        const isDark = isDarkMode();
+
+        walineInstance = init({
+          el: '#waline',
+          serverURL,
+          path,
+          lang,
+          placeholder,
+          pageSize,
+          dark: isDark,
+          emoji,
+          search: false,
+          pageview: true,
+          comment: true,
+          reaction: true,
+        });
+
+        // 监听深浅色切换
+        if (!themeObserver) {
+          themeObserver = new MutationObserver(() => {
+            if (walineInstance && typeof walineInstance.update === 'function') {
+              walineInstance.update({ dark: isDarkMode() });
+            }
+          });
+          themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme'],
+          });
+        }
+
+        if (!mediaQuery) {
+          mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+          mediaQuery.addEventListener('change', () => {
+            if (document.documentElement.dataset.theme === 'auto' && walineInstance) {
+              walineInstance.update({ dark: isDarkMode() });
+            }
+          });
+        }
+      }
+
+      function teardownWaline() {
+        if (walineInstance) {
+          try {
+            walineInstance.destroy();
+          } catch {
+            // ignore
+          }
+          walineInstance = null;
+        }
+      }
+
+      // Astro View Transitions 生命周期适配
+      document.addEventListener('astro:page-load', setupWaline);
+      document.addEventListener('astro:before-swap', teardownWaline);
+
+      // 初次加载备用调用
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupWaline);
+      } else {
+        setupWaline();
+      }
+    </script>
+  )
+}
+
+<style>
+  .waline-section {
+    margin-top: clamp(2rem, 4vw, 3.5rem);
+    padding: clamp(1.25rem, 2.5vw, 2rem);
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: border-color var(--motion-duration) var(--ease-out), box-shadow var(--motion-duration) var(--ease-out);
+  }
+
+  .waline-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px dashed var(--c-border);
+    flex-wrap: wrap;
+  }
+
+  .waline-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--c-text);
+  }
+
+  .waline-title-wrap :global(svg) {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--c-primary);
+  }
+
+  .waline-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+    color: var(--c-text);
+  }
+
+  .waline-note {
+    font-size: 0.85rem;
+    color: var(--c-text-3);
+  }
+
+  .waline-container {
+    --waline-theme-color: var(--c-primary);
+    --waline-active-color: var(--c-primary-strong);
+    --waline-color: var(--c-text-1);
+    --waline-bg-color: transparent;
+    --waline-bg-color-light: var(--c-bg-2);
+    --waline-border-color: var(--c-border);
+    --waline-disable-color: var(--c-text-3);
+    --waline-info-color: var(--c-text-3);
+    --waline-font-size: 0.95rem;
+    --waline-avatar-radius: 50%;
+    --waline-badge-color: var(--c-primary);
+    font-family: var(--font-basic);
+  }
+
+  :global(.wl-panel) {
+    border-radius: var(--radius-md) !important;
+    border-color: var(--c-border) !important;
+    background: var(--c-bg-1) !important;
+  }
+
+  :global(.wl-editor) {
+    background: transparent !important;
+  }
+
+  :global(.wl-header) {
+    border-bottom-color: var(--c-border-soft) !important;
+  }
+
+  :global(.wl-btn) {
+    border-radius: var(--radius-pill) !important;
+    font-weight: 600 !important;
+    transition: all var(--motion-fast) var(--ease-out) !important;
+  }
+
+  :global(.wl-btn.primary) {
+    background: var(--c-primary) !important;
+    color: #fff !important;
+    border: none !important;
+  }
+
+  :global(.wl-btn.primary:hover) {
+    background: var(--c-primary-strong) !important;
+    box-shadow: 0 4px 12px var(--c-primary-ring) !important;
+  }
+
+  /* 占位卡片 */
+  .waline-placeholder-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    background: var(--c-bg-1);
+    border: 1px dashed var(--c-border);
+    border-radius: var(--radius-md);
+  }
+
+  .placeholder-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-sm);
+    background: var(--c-primary-soft);
+    color: var(--c-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .placeholder-icon :global(svg) {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+
+  .placeholder-content h3 {
+    margin: 0 0 var(--space-2) 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--c-text);
+  }
+
+  .placeholder-content p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--c-text-2);
+  }
+
+  .placeholder-content code {
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm);
+    background: var(--c-bg-2);
+    border: 1px solid var(--c-border);
+    font-size: 0.85em;
+    color: var(--c-primary);
+    font-family: var(--font-mono);
+  }
+
+  @media (max-width: 640px) {
+    .waline-placeholder-card {
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+  }
+</style>

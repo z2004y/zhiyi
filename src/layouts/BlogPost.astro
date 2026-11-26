@@ -6,6 +6,8 @@ import SiteLayout from './SiteLayout.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import BlogAside from '../components/BlogAside.astro';
 import Icon from '../components/Icon.astro';
+import WalineComment from '../components/WalineComment.astro';
+import { WALINE_CONFIG } from '../consts';
 
 type Props = CollectionEntry<'blog'>['data'] & {
   headings?: MarkdownHeading[];
@@ -137,6 +139,20 @@ const tocHeadings = headings.filter(
               </>
             )
           }
+          {
+            WALINE_CONFIG.serverURL && (
+              <>
+                <span class="meta-sep" aria-hidden="true">·</span>
+                <span class="meta-item meta-views">
+                  <span class="waline-pageview-count" data-path={Astro.url.pathname}>0</span> 次阅读
+                </span>
+                <span class="meta-sep" aria-hidden="true">·</span>
+                <span class="meta-item meta-comments">
+                  <span class="waline-comment-count" data-path={Astro.url.pathname}>0</span> 条评论
+                </span>
+              </>
+            )
+          }
         </div>
       </header>
 
@@ -165,6 +181,8 @@ const tocHeadings = headings.filter(
 
       <slot />
     </div>
+
+    <WalineComment />
   </article>
 
   <BlogAside

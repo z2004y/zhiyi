@@ -2,6 +2,7 @@
 import { AUTHOR, FRIEND_LINKS, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from '../../consts';
 import Icon from '../../components/Icon.astro';
 import SiteLayout from '../../layouts/SiteLayout.astro';
+import WalineComment from '../../components/WalineComment.astro';
 
 const groups = new Map<string, typeof FRIEND_LINKS>();
 for (const friend of FRIEND_LINKS) {
@@ -197,6 +198,8 @@ descr: 你的博客一句话简介`}</code></pre>
       </div>
     </div>
   </section>
+
+  <WalineComment title="友链申请与留言" path="/links" />
 </SiteLayout>
 
 <script>
