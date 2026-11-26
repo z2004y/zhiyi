@@ -128,23 +128,15 @@ export const FRIEND_LINKS: FriendLink[] = [
  * 部署完 Vercel 服务端后，将得到的域名（如 https://waline.yourdomain.com 或 https://xxx.vercel.app）填入 serverURL
  */
 export const WALINE_CONFIG = {
-  // Waline 服务端地址（必须以 https:// 开头，末尾不要带斜杠）
   serverURL: 'https://waline.660881.xyz',
-  // 评论系统语言
   lang: 'zh-CN',
-  // 评论框提示文字
-  placeholder: '善语结善缘，恶言伤人心。欢迎畅所欲言，留下你的足迹~（支持 Markdown 与表情）',
-  // 表情包预设
+  placeholder: '说点什么…',
   emoji: [
     'https://unpkg.com/@waline/emojis@1.3.3/weibo',
     'https://unpkg.com/@waline/emojis@1.3.3/bilibili',
-    'https://unpkg.com/@waline/emojis@1.3.3/qq',
   ],
-  // 是否开启文章阅读量统计
   pageview: true,
-  // 是否开启文章评论数统计
   comment: true,
-  // 每次加载的评论数量
   pageSize: 10,
 };
 

@@ -1,31 +1,30 @@
 ---
 import '@waline/client/style';
 import { WALINE_CONFIG } from '../consts';
-import Icon from './Icon.astro';
 
 interface Props {
   path?: string;
   title?: string;
 }
 
-const { path, title = '参与讨论' } = Astro.props;
+const { path, title = '评论' } = Astro.props;
 const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.trim());
 ---
 
-<section class="waline-section" aria-label="评论区">
-  <div class="waline-header">
-    <div class="waline-title-wrap">
-      <Icon name="comment" />
-      <h2 class="waline-title">{title}</h2>
-    </div>
-    <span class="waline-note">支持 Markdown 语法与表情互动</span>
-  </div>
+{
+  hasServer && (
+    <section class="comment-wrap" aria-label="评论区">
+      <div class="comment-divider" role="separator" />
 
-  {
-    hasServer ? (
+      {title && (
+        <div class="comment-head">
+          <h2 class="comment-title">{title}</h2>
+        </div>
+      )}
+
       <div
         id="waline"
-        class="waline-container"
+        class="waline-box"
         data-server-url={WALINE_CONFIG.serverURL}
         data-path={path || ''}
         data-lang={WALINE_CONFIG.lang}
@@ -35,21 +34,9 @@ const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.tri
         data-pagesize={WALINE_CONFIG.pageSize}
         data-emojis={JSON.stringify(WALINE_CONFIG.emoji)}
       />
-    ) : (
-      <div class="waline-placeholder-card">
-        <div class="placeholder-icon">
-          <Icon name="chat" />
-        </div>
-        <div class="placeholder-content">
-          <h3>评论系统待接入</h3>
-          <p>
-            Vercel 服务端部署完成后，请在 <code>src/consts.ts</code> 中的 <code>WALINE_CONFIG.serverURL</code> 填入您的 Waline 服务端域名（例如 <code>https://comment.660881.xyz</code>），即可立即开启评论互动！
-          </p>
-        </div>
-      </div>
-    )
-  }
-</section>
+    </section>
+  )
+}
 
 {
   hasServer && (
@@ -71,7 +58,6 @@ const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.tri
         const el = document.getElementById('waline');
         if (!el) return;
 
-        // 清理旧实例
         if (walineInstance) {
           try {
             walineInstance.destroy();
@@ -86,7 +72,7 @@ const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.tri
 
         const path = el.dataset.path || window.location.pathname;
         const lang = el.dataset.lang || 'zh-CN';
-        const placeholder = el.dataset.placeholder || '';
+        const placeholder = el.dataset.placeholder || '说点什么…';
         const pageSize = Number(el.dataset.pagesize) || 10;
         let emoji: string[] = [];
         try {
@@ -95,8 +81,6 @@ const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.tri
           emoji = [];
         }
 
-        const isDark = isDarkMode();
-
         walineInstance = init({
           el: '#waline',
           serverURL,
@@ -104,15 +88,14 @@ const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.tri
           lang,
           placeholder,
           pageSize,
-          dark: isDark,
+          dark: isDarkMode(),
           emoji,
           search: false,
           pageview: true,
           comment: true,
-          reaction: true,
+          reaction: false,
         });
 
-        // 监听深浅色切换
         if (!themeObserver) {
           themeObserver = new MutationObserver(() => {
             if (walineInstance && typeof walineInstance.update === 'function') {
@@ -146,11 +129,9 @@ const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.tri
         }
       }
 
-      // Astro View Transitions 生命周期适配
       document.addEventListener('astro:page-load', setupWaline);
       document.addEventListener('astro:before-swap', teardownWaline);
 
-      // 初次加载备用调用
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', setupWaline);
       } else {
@@ -161,56 +142,36 @@ const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.tri
 }
 
 <style>
-  .waline-section {
-    margin-top: clamp(2rem, 4vw, 3.5rem);
-    padding: clamp(1.25rem, 2.5vw, 2rem);
-    background: var(--c-card);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-1);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    transition: border-color var(--motion-duration) var(--ease-out), box-shadow var(--motion-duration) var(--ease-out);
+  .comment-wrap {
+    max-width: 760px;
+    margin: 3.5rem auto 0;
+    padding-inline: 0;
   }
 
-  .waline-header {
+  .comment-divider {
+    height: 1px;
+    background: var(--c-border);
+    margin-bottom: 2rem;
+    opacity: 0.6;
+  }
+
+  .comment-head {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
-    gap: var(--space-3);
-    padding-bottom: var(--space-4);
-    margin-bottom: var(--space-4);
-    border-bottom: 1px dashed var(--c-border);
-    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
   }
 
-  .waline-title-wrap {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
+  .comment-title {
+    font-size: 1.15rem;
+    font-weight: 600;
     color: var(--c-text);
-  }
-
-  .waline-title-wrap :global(svg) {
-    width: 1.25rem;
-    height: 1.25rem;
-    color: var(--c-primary);
-  }
-
-  .waline-title {
-    font-size: 1.25rem;
-    font-weight: 700;
     margin: 0;
-    line-height: 1.2;
-    color: var(--c-text);
+    letter-spacing: -0.01em;
   }
 
-  .waline-note {
-    font-size: 0.85rem;
-    color: var(--c-text-3);
-  }
-
-  .waline-container {
+  /* Waline 样式深度微调，完全契合站点纯净极简风格 */
+  .waline-box {
     --waline-theme-color: var(--c-primary);
     --waline-active-color: var(--c-primary-strong);
     --waline-color: var(--c-text-1);
@@ -219,29 +180,70 @@ const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.tri
     --waline-border-color: var(--c-border);
     --waline-disable-color: var(--c-text-3);
     --waline-info-color: var(--c-text-3);
-    --waline-font-size: 0.95rem;
+    --waline-font-size: 0.9375rem;
     --waline-avatar-radius: 50%;
     --waline-badge-color: var(--c-primary);
+    --waline-badge-font-size: 0.725rem;
     font-family: var(--font-basic);
   }
 
+  /* 输入面板 */
   :global(.wl-panel) {
+    margin: 0 !important;
     border-radius: var(--radius-md) !important;
-    border-color: var(--c-border) !important;
+    border: 1px solid var(--c-border) !important;
     background: var(--c-bg-1) !important;
+    box-shadow: none !important;
+    transition: border-color var(--motion-fast) var(--ease-out);
   }
 
-  :global(.wl-editor) {
-    background: transparent !important;
+  :global(.wl-panel:focus-within) {
+    border-color: var(--c-primary) !important;
   }
 
   :global(.wl-header) {
-    border-bottom-color: var(--c-border-soft) !important;
+    border-bottom: 1px solid var(--c-border-soft) !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  :global(.wl-header label) {
+    color: var(--c-text-3) !important;
+    font-size: 0.85rem !important;
+  }
+
+  :global(.wl-header input) {
+    color: var(--c-text) !important;
+    font-size: 0.875rem !important;
+  }
+
+  :global(.wl-editor) {
+    padding: 0.875rem 1rem !important;
+    min-height: 5.5rem !important;
+    color: var(--c-text) !important;
+    font-size: 0.9375rem !important;
+    line-height: 1.6 !important;
+    background: transparent !important;
+  }
+
+  :global(.wl-footer) {
+    padding: 0.5rem 0.75rem !important;
+    border-top: 1px solid var(--c-border-soft) !important;
+  }
+
+  :global(.wl-action) {
+    color: var(--c-text-3) !important;
+  }
+
+  :global(.wl-action:hover) {
+    color: var(--c-primary) !important;
   }
 
   :global(.wl-btn) {
-    border-radius: var(--radius-pill) !important;
-    font-weight: 600 !important;
+    border-radius: var(--radius-sm) !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    padding: 0.4rem 1rem !important;
+    box-shadow: none !important;
     transition: all var(--motion-fast) var(--ease-out) !important;
   }
 
@@ -253,65 +255,61 @@ const hasServer = Boolean(WALINE_CONFIG.serverURL && WALINE_CONFIG.serverURL.tri
 
   :global(.wl-btn.primary:hover) {
     background: var(--c-primary-strong) !important;
-    box-shadow: 0 4px 12px var(--c-primary-ring) !important;
+    opacity: 0.92;
   }
 
-  /* 占位卡片 */
-  .waline-placeholder-card {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-4);
-    padding: var(--space-5);
-    background: var(--c-bg-1);
-    border: 1px dashed var(--c-border);
-    border-radius: var(--radius-md);
+  /* 评论列表 */
+  :global(.wl-meta-head) {
+    padding: 1.5rem 0 0.5rem !important;
   }
 
-  .placeholder-icon {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: var(--radius-sm);
-    background: var(--c-primary-soft);
-    color: var(--c-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+  :global(.wl-count) {
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    color: var(--c-text-2) !important;
   }
 
-  .placeholder-icon :global(svg) {
-    width: 1.4rem;
-    height: 1.4rem;
+  :global(.wl-card) {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+    border-bottom: 1px solid var(--c-border-soft) !important;
   }
 
-  .placeholder-content h3 {
-    margin: 0 0 var(--space-2) 0;
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: var(--c-text);
+  :global(.wl-user) {
+    font-weight: 600 !important;
+    color: var(--c-text) !important;
   }
 
-  .placeholder-content p {
-    margin: 0;
-    font-size: 0.9rem;
-    line-height: 1.6;
-    color: var(--c-text-2);
+  :global(.wl-time) {
+    color: var(--c-text-3) !important;
+    font-size: 0.8rem !important;
   }
 
-  .placeholder-content code {
-    padding: 0.15rem 0.4rem;
-    border-radius: var(--radius-sm);
-    background: var(--c-bg-2);
-    border: 1px solid var(--c-border);
-    font-size: 0.85em;
-    color: var(--c-primary);
-    font-family: var(--font-mono);
+  :global(.wl-content) {
+    color: var(--c-text-1) !important;
+    line-height: 1.7 !important;
+    font-size: 0.9375rem !important;
   }
 
-  @media (max-width: 640px) {
-    .waline-placeholder-card {
-      flex-direction: column;
-      gap: var(--space-3);
-    }
+  :global(.wl-quote) {
+    border-left: 3px solid var(--c-border) !important;
+    background: var(--c-bg-1) !important;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
+    padding: 0.5rem 0.85rem !important;
+    color: var(--c-text-2) !important;
+  }
+
+  /* 底部署名 */
+  :global(.wl-power) {
+    font-size: 0.75rem !important;
+    color: var(--c-text-3) !important;
+    padding-top: 1rem !important;
+    opacity: 0.6;
+  }
+
+  :global(.wl-power a) {
+    color: inherit !important;
+    text-decoration: underline !important;
+    text-underline-offset: 2px !important;
   }
 </style>
