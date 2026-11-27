@@ -1600,16 +1600,24 @@ a.tag:hover {
 }
 
 .featured-header {
+  display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-bottom: .75rem;
-  display: flex;
+  margin-top: 0;
+  margin-bottom: .45rem;
+  padding: 0;
+}
+
+.featured-title-wrap {
+  margin: 0;
+  padding: 0;
 }
 
 .featured-title {
-  font-size: clamp(1.5rem,3vw,2rem);
+  margin: 0;
+  font-size: clamp(1.4rem, 2.8vw, 1.85rem);
   font-weight: 700;
   line-height: 1.25;
 }
@@ -4357,12 +4365,13 @@ html[data-theme-changing] [data-transition-exempt] {
   }
 
   .featured-header {
-    margin-bottom: .5rem;
+    margin-top: 0;
+    margin-bottom: .35rem;
   }
 
   .featured-title,
   .section-title {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
   }
 
   .featured-viewport {
